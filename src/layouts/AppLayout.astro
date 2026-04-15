@@ -16,9 +16,15 @@ const { title, activeTab = 'dashboard' } = Astro.props;
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>{title} | Macro</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#10b981" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Macro" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <script is:inline>
       {
         `(function () {
@@ -30,7 +36,12 @@ const { title, activeTab = 'dashboard' } = Astro.props;
       }
     </script>
   </head>
-  <body class="min-h-[100dvh] bg-surface">
+  <body class="min-h-[100dvh] bg-surface safe-area-inset">
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+      }
+    </script>
     <div class="flex min-h-[100dvh]">
       <ThemeToggle client:load />
       <!-- Desktop sidebar -->

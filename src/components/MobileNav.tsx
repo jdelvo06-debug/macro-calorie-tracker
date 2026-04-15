@@ -76,7 +76,7 @@ const iconMap: Record<string, (props: { active: boolean }) => ReactElement> = {
 
 export default function MobileNav({ activeTab }: Props) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-border-subtle">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-border-subtle safe-area-inset" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const active = activeTab === item.id;
