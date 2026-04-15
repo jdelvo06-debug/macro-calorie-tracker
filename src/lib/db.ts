@@ -1,4 +1,6 @@
 import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import * as schema from "./schema";
 
 const tursoUrl = import.meta.env.TURSO_DATABASE_URL?.trim();
 const requestedMode = import.meta.env.DB_MODE?.trim() || "local";
@@ -20,16 +22,20 @@ const authToken = requestedMode === "turso" ? import.meta.env.TURSO_AUTH_TOKEN |
 
 export const databaseMode = requestedMode;
 
-export const db = createClient({
+// Raw libsql client — used for migrations (ensureDB) and any raw SQL needed
+export const client = createClient({
   url: dbPath,
   authToken,
 });
+
+// Drizzle ORM instance — typed queries go through this
+export const db = drizzle(client, { schema });
 
 let initialized = false;
 
 export async function ensureDB() {
   if (initialized) return;
-  await db.batch([
+  await client.batch([
     {
       sql: `CREATE TABLE IF NOT EXISTS food_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

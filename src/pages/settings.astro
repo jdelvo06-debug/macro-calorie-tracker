@@ -1,0 +1,140 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import ThemeToggle from '../components/ThemeToggle';
+
+const savedTheme = typeof Astro.locals !== 'undefined' ? undefined : undefined;
+---
+
+<AppLayout title="Settings" activeTab="settings">
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-[var(--app-text)]">Settings</h1>
+      <p class="mt-1 text-sm text-[var(--app-text-muted)]">Preferences stored locally in your browser.</p>
+    </div>
+
+    <!-- Theme -->
+    <section class="rounded-2xl border border-border-subtle bg-surface-raised p-5 space-y-4">
+      <div>
+        <h2 class="text-lg font-semibold text-[var(--app-text)]">Appearance</h2>
+        <p class="text-sm text-[var(--app-text-muted)]">Choose your preferred theme. The app defaults to your system setting.</p>
+      </div>
+      <div class="flex flex-wrap gap-3" id="theme-buttons">
+        <button data-theme-choice="dark" class="theme-btn rounded-xl border border-border-subtle bg-surface-overlay px-4 py-2.5 text-sm font-medium text-[var(--app-text)] hover:border-emerald-500/40 transition-colors">
+          🌑 Dark
+        </button>
+        <button data-theme-choice="light" class="theme-btn rounded-xl border border-border-subtle bg-surface-overlay px-4 py-2.5 text-sm font-medium text-[var(--app-text)] hover:border-emerald-500/40 transition-colors">
+          ☀️ Light
+        </button>
+        <button data-theme-choice="system" class="theme-btn rounded-xl border border-border-subtle bg-surface-overlay px-4 py-2.5 text-sm font-medium text-[var(--app-text)] hover:border-emerald-500/40 transition-colors">
+          💻 System
+        </button>
+      </div>
+      <p class="text-xs text-[var(--app-text-muted)]" id="current-theme"></p>
+    </section>
+
+    <!-- Weight Unit -->
+    <section class="rounded-2xl border border-border-subtle bg-surface-raised p-5 space-y-4">
+      <div>
+        <h2 class="text-lg font-semibold text-[var(--app-text)]">Weight Unit</h2>
+        <p class="text-sm text-[var(--app-text-muted)]">Your preferred weight unit for display. Data is stored in pounds internally.</p>
+      </div>
+      <div class="flex flex-wrap gap-3" id="unit-buttons">
+        <button data-unit-choice="lb" class="unit-btn rounded-xl border border-border-subtle bg-surface-overlay px-4 py-2.5 text-sm font-medium text-[var(--app-text)] hover:border-emerald-500/40 transition-colors">
+          lbs
+        </button>
+        <button data-unit-choice="kg" class="unit-btn rounded-xl border border-border-subtle bg-surface-overlay px-4 py-2.5 text-sm font-medium text-[var(--app-text)] hover:border-emerald-500/40 transition-colors">
+          kg
+        </button>
+      </div>
+      <p class="text-xs text-[var(--app-text-muted)]" id="current-unit"></p>
+    </section>
+
+    <!-- Database Info -->
+    <section class="rounded-2xl border border-border-subtle bg-surface-raised p-5 space-y-3">
+      <h2 class="text-lg font-semibold text-[var(--app-text)]">Database</h2>
+      <div class="space-y-2 text-sm text-[var(--app-text-soft)]">
+        <p>Mode: <span class="font-mono text-emerald-400" id="db-mode">{import.meta.env.DB_MODE || "local"}</span></p>
+        <p class="text-xs text-[var(--app-text-muted)]">All data is stored locally in your browser. Enable Turso for cloud sync.</p>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section class="rounded-2xl border border-border-subtle bg-surface-raised p-5 space-y-3">
+      <h2 class="text-lg font-semibold text-[var(--app-text)]">About</h2>
+      <div class="space-y-2 text-sm text-[var(--app-text-soft)]">
+        <p>Macro — Calorie Tracker</p>
+        <p class="text-xs text-[var(--app-text-muted)]">Frankenmerge build. Best of Claude, Codex, and GLM.</p>
+      </div>
+    </section>
+  </div>
+</AppLayout>
+
+<script is:inline>
+  // Highlight active theme button
+  function updateThemeButtons() {
+    const stored = localStorage.getItem("theme");
+    const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+    const current = stored || (prefersLight ? "light" : "dark");
+    const display = stored || "system";
+
+    document.querySelectorAll("[data-theme-choice]").forEach(btn => {
+      const choice = btn.getAttribute("data-theme-choice");
+      if (choice === display) {
+        btn.classList.add("border-emerald-500", "text-emerald-400");
+        btn.classList.remove("border-border-subtle");
+      } else {
+        btn.classList.remove("border-emerald-500", "text-emerald-400");
+        btn.classList.add("border-border-subtle");
+      }
+    });
+
+    const label = document.getElementById("current-theme");
+    if (label) label.textContent = `Active: ${current} theme`;
+  }
+
+  document.querySelectorAll("[data-theme-choice]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const choice = btn.getAttribute("data-theme-choice");
+      if (!choice) return;
+      if (choice === "system") {
+        localStorage.removeItem("theme");
+        const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+        document.documentElement.dataset.theme = prefersLight ? "light" : "dark";
+      } else {
+        localStorage.setItem("theme", choice);
+        document.documentElement.dataset.theme = choice;
+      }
+      updateThemeButtons();
+    });
+  });
+
+  // Highlight active unit button
+  function updateUnitButtons() {
+    const stored = localStorage.getItem("weight-unit") || "lb";
+    document.querySelectorAll("[data-unit-choice]").forEach(btn => {
+      const choice = btn.getAttribute("data-unit-choice");
+      if (choice === stored) {
+        btn.classList.add("border-emerald-500", "text-emerald-400");
+        btn.classList.remove("border-border-subtle");
+      } else {
+        btn.classList.remove("border-emerald-500", "text-emerald-400");
+        btn.classList.add("border-border-subtle");
+      }
+    });
+
+    const label = document.getElementById("current-unit");
+    if (label) label.textContent = `Active: ${stored === "lb" ? "Pounds" : "Kilograms"}`;
+  }
+
+  document.querySelectorAll("[data-unit-choice]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const choice = btn.getAttribute("data-unit-choice");
+      if (!choice) return;
+      localStorage.setItem("weight-unit", choice);
+      updateUnitButtons();
+    });
+  });
+
+  updateThemeButtons();
+  updateUnitButtons();
+</script>
