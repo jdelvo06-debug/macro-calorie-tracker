@@ -1,0 +1,11 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+import NutritionDetailView from '../../components/NutritionDetail';
+
+const { id } = Astro.params;
+---
+
+<AppLayout title="Nutrition Detail" activeTab="diary">
+  <NutritionDetailView client:load foodId={id!} />
+</AppLayout>

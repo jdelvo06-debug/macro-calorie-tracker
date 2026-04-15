@@ -1,0 +1,50 @@
+---
+import '../styles/global.css';
+import MobileNav from '../components/MobileNav';
+import DesktopSidebar from '../components/DesktopSidebar.astro';
+import ThemeToggle from '../components/ThemeToggle';
+
+interface Props {
+  title: string;
+  activeTab?: string;
+}
+
+const { title, activeTab = 'dashboard' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} | Macro</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script is:inline>
+      {
+        `(function () {
+          const stored = localStorage.getItem("theme");
+          const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+          const theme = stored === "light" || stored === "dark" ? stored : (prefersLight ? "light" : "dark");
+          document.documentElement.dataset.theme = theme;
+        })();`
+      }
+    </script>
+  </head>
+  <body class="min-h-[100dvh] bg-surface">
+    <div class="flex min-h-[100dvh]">
+      <ThemeToggle client:load />
+      <!-- Desktop sidebar -->
+      <DesktopSidebar activeTab={activeTab} />
+
+      <!-- Main content -->
+      <main class="flex-1 pb-20 md:pb-0 md:ml-64">
+        <div class="max-w-5xl mx-auto px-4 py-6 md:py-8">
+          <slot />
+        </div>
+      </main>
+
+      <!-- Mobile bottom nav -->
+      <MobileNav client:load activeTab={activeTab} />
+    </div>
+  </body>
+</html>

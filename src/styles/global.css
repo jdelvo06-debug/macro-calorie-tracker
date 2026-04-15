@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import "@fontsource-variable/outfit";
+
+@theme {
+  --font-sans: "Outfit Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-zinc-925: #111113;
+  --color-zinc-875: #1a1a1f;
+  --color-zinc-850: #202025;
+
+  --color-protein: #3b82f6;
+  --color-protein-dim: #1e3a5f;
+  --color-carbs: #f59e0b;
+  --color-carbs-dim: #5c3d0a;
+  --color-fat: #ef4444;
+  --color-fat-dim: #5c1a1a;
+
+  --color-surface: #18181b;
+  --color-surface-raised: #1f1f23;
+  --color-surface-overlay: #27272a;
+  --color-border-subtle: #2a2a2e;
+  --color-accent: #10b981;
+  --color-accent-dim: #064e3b;
+}
+
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #09090b;
+  --app-text: #f4f4f5;
+  --app-text-soft: #a1a1aa;
+  --app-text-muted: #71717a;
+  --app-input-bg: rgba(39, 39, 42, 0.65);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f4f4f5;
+  --color-surface-overlay: #e4e4e7;
+  --color-border-subtle: #d4d4d8;
+  --color-accent-dim: #d1fae5;
+  --app-bg: #f5f7fb;
+  --app-text: #18181b;
+  --app-text-soft: #3f3f46;
+  --app-text-muted: #71717a;
+  --app-input-bg: rgba(228, 228, 231, 0.9);
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4 {
+    @apply tracking-tight;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3f3f46 transparent;
+  }
+}
+
+html[data-theme="light"] .text-zinc-100,
+html[data-theme="light"] .text-zinc-200,
+html[data-theme="light"] .text-zinc-300 {
+  color: #18181b !important;
+}
+
+html[data-theme="light"] .text-zinc-400 {
+  color: #3f3f46 !important;
+}
+
+html[data-theme="light"] .text-zinc-500,
+html[data-theme="light"] .text-zinc-600 {
+  color: #71717a !important;
+}
+
+html[data-theme="light"] .bg-zinc-800,
+html[data-theme="light"] .bg-zinc-800\/50,
+html[data-theme="light"] .bg-zinc-800\/30,
+html[data-theme="light"] .bg-zinc-900\/95 {
+  background-color: var(--app-input-bg) !important;
+}
+
+html[data-theme="light"] .border-zinc-700,
+html[data-theme="light"] .border-zinc-800 {
+  border-color: #d4d4d8 !important;
+}
