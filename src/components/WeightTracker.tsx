@@ -214,7 +214,7 @@ export default function WeightTracker() {
             />
           </label>
           <label className="relative flex-1">
-            <span className="sr-only">Weight in kilograms</span>
+            <span className="sr-only">Weight in pounds</span>
             <input
               type="number"
               step="0.1"
@@ -223,7 +223,7 @@ export default function WeightTracker() {
               placeholder="Weight"
               className="w-full px-4 py-2.5 pr-12 rounded-xl bg-zinc-800/50 border border-border-subtle text-zinc-200 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-zinc-500">kg</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-zinc-500">lbs</span>
           </label>
           <button
             type="button"
@@ -248,12 +248,12 @@ export default function WeightTracker() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="rounded-xl bg-surface border border-border-subtle p-4">
                 <p className="text-xs text-zinc-500 mb-1">Current</p>
-                <p className="text-xl font-semibold tracking-tight font-mono text-zinc-100">{latest.weight} kg</p>
+                <p className="text-xl font-semibold tracking-tight font-mono text-zinc-100">{latest.weight} lbs</p>
               </div>
               {goals?.goal_weight != null && (
                 <div className="rounded-xl bg-surface border border-border-subtle p-4">
                   <p className="text-xs text-zinc-500 mb-1">Goal</p>
-                  <p className="text-xl font-semibold tracking-tight font-mono text-blue-400">{goals.goal_weight} kg</p>
+                  <p className="text-xl font-semibold tracking-tight font-mono text-blue-400">{goals.goal_weight} lbs</p>
                 </div>
               )}
               {change !== null && (
@@ -261,7 +261,7 @@ export default function WeightTracker() {
                   <p className="text-xs text-zinc-500 mb-1">Change ({range}d)</p>
                   <p className={`text-xl font-semibold tracking-tight font-mono ${change < 0 ? "text-emerald-400" : change > 0 ? "text-red-400" : "text-zinc-400"}`}>
                     {change > 0 ? "+" : ""}
-                    {change.toFixed(1)} kg
+                    {change.toFixed(1)} lbs
                   </p>
                 </div>
               )}
@@ -304,7 +304,7 @@ export default function WeightTracker() {
                 {[...entries].reverse().map((entry) => (
                   <div key={entry.id} className="flex items-center justify-between px-5 py-3">
                     <div>
-                      <span className="text-sm text-zinc-300 font-mono">{entry.weight} kg</span>
+                      <span className="text-sm text-zinc-300 font-mono">{entry.weight} lbs</span>
                       <span className="text-xs text-zinc-600 ml-3">
                         {parseDateKey(entry.date)?.toLocaleDateString("en-US", {
                           month: "short",

@@ -240,7 +240,7 @@ export default function GoalsSettings() {
             placeholder="Optional"
             className="w-full px-4 py-3 pr-12 rounded-xl bg-zinc-800/50 border border-border-subtle text-zinc-200 font-mono focus:outline-none focus:border-zinc-600 placeholder:text-zinc-600"
           />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">kg</span>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">lbs</span>
         </label>
       </div>
 

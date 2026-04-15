@@ -22,7 +22,9 @@ export function jsonError(error: unknown): Response {
     return json({ error: error.message }, error.status);
   }
 
-  return json({ error: "Request failed." }, 500);
+  console.error("API Error:", error);
+  const message = error instanceof Error ? error.message : "Request failed.";
+  return json({ error: message }, 500);
 }
 
 export async function readApiResponse<T>(response: Response): Promise<T> {

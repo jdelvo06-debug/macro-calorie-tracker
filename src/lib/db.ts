@@ -22,20 +22,20 @@ const authToken = requestedMode === "turso" ? import.meta.env.TURSO_AUTH_TOKEN |
 
 export const databaseMode = requestedMode;
 
-// Raw libsql client — used for migrations (ensureDB) and any raw SQL needed
-export const client = createClient({
+// Raw libsql client — used by API routes for raw SQL queries
+export const db = createClient({
   url: dbPath,
   authToken,
 });
 
-// Drizzle ORM instance — typed queries go through this
-export const db = drizzle(client, { schema });
+// Drizzle ORM instance — for typed queries (future use)
+export const orm = drizzle(db, { schema });
 
 let initialized = false;
 
 export async function ensureDB() {
   if (initialized) return;
-  await client.batch([
+  await db.batch([
     {
       sql: `CREATE TABLE IF NOT EXISTS food_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
