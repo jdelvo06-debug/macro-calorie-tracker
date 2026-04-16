@@ -54,7 +54,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
   const [foundCode, setFoundCode] = useState<string | null>(null);
   const scannedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const recentCodes = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -119,24 +118,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       // Validate format
       if (!isValidBarcode(code)) return;
 
-      // Verify check digits
-      if (!verifyEAN13(code) || !verifyUPCA(code)) return;
-
-      // Confirmation: require same code read at least 2 times within 1.5 seconds
-      const now = Date.now();
-      const recent = recentCodes.current;
-
-      // Clean old entries (>3s)
-      for (const [k, t] of recent) {
-        if (now - t > 3000) recent.delete(k);
-      }
-
-      const count = (recent.get(code) || 0) + 1;
-      recent.set(code, count);
-
-      if (count < 2) return; // Need at least 2 reads to confirm
-
-      // Confirmed!
+      // Confirmed - single read is enough
       scannedRef.current = true;
       setScanning(false);
       setFoundCode(code);
