@@ -13,6 +13,7 @@ import type { SearchResult } from "../lib/open-food-facts";
 const base = '/macro-calorie-tracker/';
 
 type Tab = "search" | "recent";
+type ServingMode = "servings" | "grams" | "oz";
 
 export default function FoodSearch() {
   const [tab, setTab] = useState<Tab>("search");
@@ -27,6 +28,7 @@ export default function FoodSearch() {
   const [selectedDate, setSelectedDate] = useState(toDateKey());
   const [adding, setAdding] = useState<string | null>(null);
   const [servings, setServings] = useState<Record<string, number>>({});
+  const [servingModes, setServingModes] = useState<Record<string, ServingMode>>({});
   const [searchError, setSearchError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,20 +124,107 @@ export default function FoodSearch() {
     return { value: Math.round(per100g || perServing || 0), label: `per 100g` };
   }
 
+  /** Calculate nutrition based on serving mode */
+  function calcNutrition(product: SearchResult): {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number | null;
+    sugar: number | null;
+    sodium: number | null;
+    servings: number;
+    servingLabel: string;
+  } {
+    const mode = servingModes[product.code] || "servings";
+    const amount = servings[product.code] || 1;
+    const nutriments = product.nutriments;
+    const perServing = {
+      calories: nutriments["energy-kcal_serving"] ?? nutriments["energy-kcal_100g"] ?? 0,
+      protein: nutriments.proteins_serving ?? nutriments.proteins_100g ?? 0,
+      carbs: nutriments.carbohydrates_serving ?? nutriments.carbohydrates_100g ?? 0,
+      fat: nutriments.fat_serving ?? nutriments.fat_100g ?? 0,
+      fiber: nutriments.fiber_serving ?? nutriments.fiber_100g ?? null,
+      sugar: nutriments.sugars_serving ?? nutriments.sugars_100g ?? null,
+      sodium: nutriments.sodium_serving ?? nutriments.sodium_100g ?? null,
+    };
+
+    if (mode === "grams") {
+      // amount = grams, calculate from per-100g values
+      const ratio = amount / 100;
+      return {
+        calories: Math.round((nutriments["energy-kcal_100g"] ?? nutriments["energy-kcal_serving"] ?? 0) * ratio),
+        protein: Math.round((nutriments.proteins_100g ?? nutriments.proteins_serving ?? 0) * ratio * 10) / 10,
+        carbs: Math.round((nutriments.carbohydrates_100g ?? nutriments.carbohydrates_serving ?? 0) * ratio * 10) / 10,
+        fat: Math.round((nutriments.fat_100g ?? nutriments.fat_serving ?? 0) * ratio * 10) / 10,
+        fiber: nutriments.fiber_100g != null ? Math.round(nutriments.fiber_100g * ratio * 10) / 10 : null,
+        sugar: nutriments.sugars_100g != null ? Math.round(nutriments.sugars_100g * ratio * 10) / 10 : null,
+        sodium: nutriments.sodium_100g != null ? Math.round(nutriments.sodium_100g * ratio * 10) / 10 : null,
+        servings: ratio,
+        servingLabel: `${amount}g`,
+      };
+    }
+
+    if (mode === "oz") {
+      // amount = oz, convert to grams then calculate from per-100g
+      const grams = amount * 28.3495;
+      const ratio = grams / 100;
+      return {
+        calories: Math.round((nutriments["energy-kcal_100g"] ?? nutriments["energy-kcal_serving"] ?? 0) * ratio),
+        protein: Math.round((nutriments.proteins_100g ?? nutriments.proteins_serving ?? 0) * ratio * 10) / 10,
+        carbs: Math.round((nutriments.carbohydrates_100g ?? nutriments.carbohydrates_serving ?? 0) * ratio * 10) / 10,
+        fat: Math.round((nutriments.fat_100g ?? nutriments.fat_serving ?? 0) * ratio * 10) / 10,
+        fiber: nutriments.fiber_100g != null ? Math.round(nutriments.fiber_100g * ratio * 10) / 10 : null,
+        sugar: nutriments.sugars_100g != null ? Math.round(nutriments.sugars_100g * ratio * 10) / 10 : null,
+        sodium: nutriments.sodium_100g != null ? Math.round(nutriments.sodium_100g * ratio * 10) / 10 : null,
+        servings: ratio,
+        servingLabel: `${amount}oz`,
+      };
+    }
+
+    // Default: servings mode
+    const servingSize = getServingSize(product);
+    return {
+      calories: Math.round(perServing.calories * amount),
+      protein: Math.round(perServing.protein * amount * 10) / 10,
+      carbs: Math.round(perServing.carbs * amount * 10) / 10,
+      fat: Math.round(perServing.fat * amount * 10) / 10,
+      fiber: perServing.fiber != null ? Math.round(perServing.fiber * amount * 10) / 10 : null,
+      sugar: perServing.sugar != null ? Math.round(perServing.sugar * amount * 10) / 10 : null,
+      sodium: perServing.sodium != null ? Math.round(perServing.sodium * amount * 10) / 10 : null,
+      servings: amount,
+      servingLabel: amount > 1 ? `${amount} × ${servingSize}` : servingSize,
+    };
+  }
+
   async function addFood(product: SearchResult) {
     setAdding(product.code);
     setActionMessage(null);
 
-    const servingCount = servings[product.code] || 1;
+    const nutrition = calcNutrition(product);
 
     const payload = toFoodLogPayload(product, {
       date: selectedDate,
       meal_type: selectedMeal,
-      servings: servingCount,
+      servings: nutrition.servings,
     });
 
+    // Override with calculated values when using grams/oz mode
+    const finalPayload = {
+      ...payload,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      fiber: nutrition.fiber,
+      sugar: nutrition.sugar,
+      sodium: nutrition.sodium,
+      serving_size: nutrition.servingLabel,
+      servings: nutrition.servings,
+    };
+
     try {
-      await addFoodLog(payload);
+      await addFoodLog(finalPayload);
       setActionMessage({ text: `Added to ${MEAL_LABELS[selectedMeal]} on ${toFriendlyDate(selectedDate)}.`, isError: false });
     } catch (error) {
       setActionMessage({ text: error instanceof Error ? error.message : "Failed to add food.", isError: true });
@@ -361,7 +450,9 @@ export default function FoodSearch() {
             {results.map((product) => {
               const calories = getCalsPer(product);
               const isAdding = adding === product.code;
-              const servingCount = servings[product.code] || 1;
+              const mode = servingModes[product.code] || "servings";
+              const amount = servings[product.code] || 1;
+              const nutrition = calcNutrition(product);
 
               return (
                 <div
@@ -398,46 +489,98 @@ export default function FoodSearch() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-3 pt-3 border-t border-border-subtle">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-500">Servings:</span>
-                      <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle">
+                  <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-border-subtle">
+                    {/* Serving mode toggle */}
+                    <div className="flex items-center gap-1">
+                      {(["servings", "grams", "oz"] as ServingMode[]).map((m) => (
                         <button
+                          key={m}
                           type="button"
-                          aria-label={`Decrease servings for ${product.product_name}`}
-                          onClick={() =>
-                            setServings((current) => ({
-                              ...current,
-                              [product.code]: Math.max(0.25, (current[product.code] || 1) - 0.5),
-                            }))
-                          }
-                          className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+                          onClick={() => {
+                            setServingModes((prev) => ({ ...prev, [product.code]: m }));
+                            if (m === "servings" && (!servings[product.code] || servings[product.code] === 0)) {
+                              setServings((prev) => ({ ...prev, [product.code]: 1 }));
+                            } else if (m === "grams" && (!servings[product.code] || servings[product.code] === 1)) {
+                              setServings((prev) => ({ ...prev, [product.code]: 100 }));
+                            } else if (m === "oz" && (!servings[product.code] || servings[product.code] === 1)) {
+                              setServings((prev) => ({ ...prev, [product.code]: 4 }));
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                            mode === m
+                              ? "bg-zinc-700 text-zinc-100"
+                              : "text-zinc-500 hover:text-zinc-300"
+                          }`
+                        }
                         >
-                          −
+                          {m === "servings" ? "× servings" : m === "grams" ? "grams" : "oz"}
                         </button>
-                        <span className="px-2 py-1 text-sm font-mono text-zinc-300 min-w-[2rem] text-center">
-                          {servingCount}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label={`Increase servings for ${product.product_name}`}
-                          onClick={() =>
-                            setServings((current) => ({
-                              ...current,
-                              [product.code]: (current[product.code] || 1) + 0.5,
-                            }))
-                          }
-                          className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
-                        >
-                          +
-                        </button>
-                      </div>
+                      ))}
                     </div>
+
+                    {/* Amount input */}
+                    <div className="flex items-center gap-2">
+                      {mode === "servings" ? (
+                        <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle">
+                          <button
+                            type="button"
+                            aria-label={`Decrease servings for ${product.product_name}`}
+                            onClick={() =>
+                              setServings((current) => ({
+                                ...current,
+                                [product.code]: Math.max(0.25, (current[product.code] || 1) - 0.5),
+                              }))
+                            }
+                            className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="px-2 py-1 text-sm font-mono text-zinc-300 min-w-[2rem] text-center">
+                            {amount}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Increase servings for ${product.product_name}`}
+                            onClick={() =>
+                              setServings((current) => ({
+                                ...current,
+                                [product.code]: (current[product.code] || 1) + 0.5,
+                              }))
+                            }
+                            className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step={mode === "oz" ? "0.5" : "1"}
+                            value={amount}
+                            onChange={(e) =>
+                              setServings((current) => ({
+                                ...current,
+                                [product.code]: Math.max(0, parseFloat(e.target.value) || 0),
+                              }))
+                            }
+                            className="w-20 px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-border-subtle text-zinc-200 text-sm font-mono focus:outline-none focus:border-zinc-600"
+                            placeholder={mode === "grams" ? "100" : "4"}
+                          />
+                          <span className="text-xs text-zinc-500">{mode === "grams" ? "g" : "oz"}</span>
+                        </div>
+                      )}
+                      <span className="text-xs text-zinc-500 ml-1">
+                        ≈ {nutrition.calories} kcal
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => addFood(product)}
                       disabled={isAdding}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60"
+                      className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60"
                     >
                       {isAdding ? "Adding..." : `Add to ${MEAL_LABELS[selectedMeal]}`}
                     </button>
@@ -484,7 +627,7 @@ export default function FoodSearch() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-3 pt-3 border-t border-border-subtle">
+                    <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-border-subtle">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-zinc-500">Servings:</span>
                         <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle">
@@ -521,7 +664,7 @@ export default function FoodSearch() {
                         type="button"
                         onClick={() => addRecentItem(item)}
                         disabled={isAdding}
-                        className="px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60"
+                        className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60"
                       >
                         {isAdding ? "Adding..." : `Add to ${MEAL_LABELS[selectedMeal]}`}
                       </button>
