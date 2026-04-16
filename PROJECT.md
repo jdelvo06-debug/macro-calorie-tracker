@@ -1,6 +1,6 @@
 # Project: Macro Calorie Tracker
 
-> A mobile-first calorie/macro tracking PWA with offline-first IndexedDB storage and Supabase cloud sync.
+> Mobile-first calorie/macro tracking PWA — offline-first IndexedDB + Supabase cloud sync.
 
 ## Quick Links
 
@@ -15,56 +15,84 @@
 
 ## Tech Stack
 
-- Astro (static) + React + Tailwind CSS
-- IndexedDB (Dexie) — offline-first storage
-- Supabase — cloud backup/sync (dual-write, no auth yet)
-- USDA FoodData Central + Open Food Facts APIs
+- Astro 6 (static) + React 19 + Tailwind CSS 4
+- IndexedDB (raw API) — offline-first storage
+- Supabase JS SDK — cloud backup/sync (dual-write, no auth yet)
+- USDA FoodData Central + Open Food Facts APIs (client-side)
+- Quagga2 — 1D barcode scanning (UPC/EAN)
+- Chart.js — weight tracking graph
 - GitHub Pages via GitHub Actions
 
 ## Architecture Decisions
 
 | Decision | Choice | Why |
 |----------|--------|-----|
-| Storage | IndexedDB (Dexie) | Works offline, no server needed, fast local reads |
-| Cloud sync | Supabase (dual-write) | Free tier, proper DB, scales to auth later |
+| Storage | IndexedDB (raw API) | Works offline, no server needed, fast local reads |
+| Cloud sync | Supabase dual-write | Free tier, real DB, scales to auth later |
 | Hosting | GitHub Pages | Free, simple, Jeremy's preference |
-| Food search | Client-side API calls | No server needed, USDA/OFF APIs are CORS-friendly |
+| Food search | Client-side API calls | Both USDA/OFF are CORS-friendly |
+| Barcode | Quagga2 (not html5-qrcode) | Purpose-built for 1D barcodes, better UPC/EAN |
+| Serving toggle | servings / grams / oz | Users think in different units for different foods |
 | PWA | Standalone + portrait | Mobile-first app experience |
 | Auth | None yet | Single-user, RLS with `true` policies |
 
 ## Supabase Schema
 
-```sql
--- food_log: BIGSERIAL PK, stores per-entry nutrition
--- weight_entries: UNIQUE(date), daily weigh-ins
--- goals: id=1 only, single row for targets
-```
+| Table | PK | Notes |
+|-------|----|-------|
+| `food_log` | `BIGSERIAL` | Per-entry nutrition, date + meal_type |
+| `weight_entries` | `BIGSERIAL` | `UNIQUE(date)` — one per day |
+| `goals` | `id=1` | Single row for targets |
 
-Full schema: `supabase-schema.sql` in repo root.
+Full DDL: `supabase-schema.sql`
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/lib/db-client.ts` | IndexedDB CRUD + Supabase dual-write |
-| `src/lib/supabase.ts` | Supabase client init |
-| `src/lib/food-search-client.ts` | USDA + OFF search, serving size normalization |
+| `src/lib/db-client.ts` | IndexedDB CRUD + Supabase dual-write + recent foods |
+| `src/lib/food-search-client.ts` | USDA + OFF search, serving normalization, barcode lookup |
 | `src/lib/open-food-facts.ts` | Nutrient helpers, log payload builder |
-| `src/layouts/AppLayout.astro` | Layout with sync-on-load trigger |
+| `src/lib/supabase.ts` | Supabase client init |
+| `src/lib/types.ts` | TypeScript interfaces, MealType, meal labels |
+| `src/components/FoodSearch.tsx` | Search + Recent tabs, serving toggle, barcode scan trigger |
+| `src/components/BarcodeScanner.tsx` | Quagga2 live scan + photo upload fallback |
+| `src/components/Dashboard.tsx` | Home: calorie ring, macro bars, today's meals |
+| `src/components/Diary.tsx` | Daily log grouped by meal, inline edit/delete |
+| `src/components/DataManager.tsx` | Export/import JSON in Settings |
+| `src/layouts/AppLayout.astro` | Shared layout, sync-on-load trigger |
 | `astro.config.mjs` | Static output, base path, env defines |
 | `public/manifest.json` | PWA manifest |
 | `public/sw.js` | Service worker |
 | `.github/workflows/deploy.yml` | Auto-deploy workflow |
 
-## TODO
+## Current Status
 
-- [ ] Polish serving display ("10x 10 kcal" → better format)
-- [ ] Serving unit selector (servings / oz / grams)
-- [ ] Export/import as data safety net
-- [ ] Test PWA install on iPhone
-- [ ] Add auth when multi-device becomes real
+### ✅ Shipped (2026-04-15)
+- Static migration (LibSQL → IndexedDB)
+- PWA manifest + service worker
+- Supabase cloud sync (dual-write + pull)
+- USDA per-serving conversion (50+ common foods)
+- GitHub Pages routing fix (base path)
+- Serving display polish (no more "10x 10 kcal")
+- Recent foods tab (deduped, one-tap re-log)
+- Export/import (JSON backup in Settings)
+- Barcode scanner (Quagga2, live + photo)
+- Serving unit toggle (servings / grams / oz)
+- Scanner polish (check digits, 2-read confirm, vignette)
+
+### 🔲 Backlog
+- [ ] PWA install test on iPhone
+- [ ] Auth (Supabase auth when multi-device is real)
+- [ ] Conflict resolution for Supabase sync
+- [ ] Dark/light theme consistency in React components
+- [ ] Serving size editing after logging
+- [ ] Nutrition detail view (tap food in Diary for full breakdown)
+- [ ] Barcode: test photo upload fallback on iOS
+- [ ] Accessibility audit (ARIA, focus management)
 
 ## History
 
+- **2026-04-15**: Feature sprint — barcode scanner, serving toggle, recent foods, export/import, scanner polish
 - **2026-04-15**: Static migration, PWA, Supabase sync, serving size fix, GitHub Pages routing
-- **2026-04-14**: Original build (LibSQL + Node adapter + basic auth)
+- **2026-04-14**: Original build (LibSQL + Node adapter + basic auth) — see `_archive/`
