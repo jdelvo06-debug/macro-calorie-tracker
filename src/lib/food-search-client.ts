@@ -202,7 +202,7 @@ async function searchUSDA(query: string): Promise<SearchResult[]> {
   const url = new URL("https://api.nal.usda.gov/fdc/v1/foods/search");
   url.searchParams.set("query", query);
   url.searchParams.set("pageSize", "10");
-  url.searchParams.set("dataType", "Foundation,SR Legacy");
+  url.searchParams.set("dataType", "Foundation,SR Legacy,Branded");
   url.searchParams.set("api_key", USDA_API_KEY);
 
   try {

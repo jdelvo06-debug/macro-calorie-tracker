@@ -63,13 +63,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
-          area: {
-            // Restrict detection to center 80% width, 40% height
-            top: "30%",
-            right: "10%",
-            left: "10%",
-            bottom: "30%",
-          },
+
         },
         locator: {
           patchSize: "medium",
@@ -122,9 +116,9 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       const now = Date.now();
       const recent = recentCodes.current;
 
-      // Clean old entries (>1.5s)
+      // Clean old entries (>3s)
       for (const [k, t] of recent) {
-        if (now - t > 1500) recent.delete(k);
+        if (now - t > 3000) recent.delete(k);
       }
 
       const count = (recent.get(code) || 0) + 1;
