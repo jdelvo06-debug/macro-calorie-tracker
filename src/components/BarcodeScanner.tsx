@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -13,7 +13,19 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
   const containerId = "barcode-scanner";
 
   useEffect(() => {
-    const scanner = new Html5Qrcode(containerId);
+    // Create scanner with barcode formats (not just QR)
+    const scanner = new Html5Qrcode(containerId, {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,     // Most common food barcode (US/EU)
+        Html5QrcodeSupportedFormats.EAN_8,      // Shorter barcode
+        Html5QrcodeSupportedFormats.UPC_A,       // US standard
+        Html5QrcodeSupportedFormats.UPC_E,       // US compact
+        Html5QrcodeSupportedFormats.CODE_128,    // General purpose
+        Html5QrcodeSupportedFormats.CODE_39,     // Older format
+        Html5QrcodeSupportedFormats.QR_CODE,     // Keep QR too
+      ],
+      verbose: false,
+    });
     scannerRef.current = scanner;
 
     let stopped = false;
@@ -22,9 +34,14 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       .start(
         { facingMode: "environment" }, // back camera
         {
-          fps: 10,
-          qrbox: { width: 250, height: 150 },
-          aspectRatio: 1.0,
+          fps: 15,
+          qrbox: function (viewfinderWidth, viewfinderHeight) {
+            // Wide rectangle for barcodes (not square like QR)
+            const width = Math.min(viewfinderWidth * 0.85, 350);
+            const height = Math.min(viewfinderHeight * 0.3, 120);
+            return { width, height };
+          },
+          aspectRatio: 1.5,
         },
         (decodedText) => {
           // Debounce: ignore same barcode within 3 seconds
@@ -96,8 +113,9 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         )}
       </div>
 
-      <div className="px-4 py-4 bg-zinc-900 text-center">
-        <p className="text-xs text-zinc-500">Point your camera at a barcode on the food package</p>
+      <div className="px-4 py-4 bg-zinc-900 text-center space-y-1">
+        <p className="text-xs text-zinc-500">Point your camera at the barcode — hold steady</p>
+        <p className="text-xs text-zinc-600">Supports UPC, EAN, and QR codes</p>
       </div>
     </div>
   );
