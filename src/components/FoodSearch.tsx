@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 import { addFoodLog, getRecentFoods, type FoodLogEntry } from "../lib/db-client";
-import { searchFoods } from "../lib/food-search-client";
+import { searchFoods, lookupBarcode } from "../lib/food-search-client";
 import { getServingSize, toFoodLogPayload } from "../lib/open-food-facts";
+import BarcodeScanner from "./BarcodeScanner";
 import type { MealType } from "../lib/types";
 import { MEAL_LABELS, MEAL_ORDER } from "../lib/types";
 import { isMealType } from "../lib/validation";
@@ -20,6 +21,8 @@ export default function FoodSearch() {
   const [recentItems, setRecentItems] = useState<FoodLogEntry[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [looking, setLooking] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<MealType>("breakfast");
   const [selectedDate, setSelectedDate] = useState(toDateKey());
   const [adding, setAdding] = useState<string | null>(null);
@@ -174,6 +177,28 @@ export default function FoodSearch() {
     }
   }
 
+  /** Handle barcode scan result */
+  async function handleBarcodeScan(barcode: string) {
+    setLooking(true);
+    setSearchError(null);
+
+    try {
+      const product = await lookupBarcode(barcode);
+      if (product) {
+        setResults([product]);
+        setSearched(true);
+        setTab("search");
+        setActionMessage({ text: `Found: ${product.product_name}`, isError: false });
+      } else {
+        setSearchError(`Barcode ${barcode} not found in Open Food Facts. Try searching by name instead.`);
+      }
+    } catch {
+      setSearchError(`Barcode lookup failed. Try searching by name instead.`);
+    } finally {
+      setLooking(false);
+    }
+  }
+
   /** Convert a FoodLogEntry into a SearchResult-like object for the addFood function */
   function recentToSearchResult(item: FoodLogEntry): SearchResult {
     return {
@@ -287,16 +312,35 @@ export default function FoodSearch() {
               value={query}
               onChange={(event) => handleInput(event.target.value)}
               placeholder="Search foods, brands, barcodes..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-surface border border-border-subtle text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+              className="w-full pl-12 pr-14 py-3.5 rounded-xl bg-surface border border-border-subtle text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
               autoFocus
               aria-label="Search foods"
             />
-            {searching && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {searching && (
                 <div className="w-5 h-5 border-2 border-zinc-600 border-t-emerald-400 rounded-full animate-spin" />
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => setScanning(true)}
+                className="p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                aria-label="Scan barcode"
+                title="Scan barcode"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125-1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+                </svg>
+              </button>
+            </div>
           </div>
+
+          {looking && (
+            <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-4 text-sm text-blue-300 flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              Looking up barcode...
+            </div>
+          )}
 
           {searchError && (
             <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-300">
@@ -492,6 +536,13 @@ export default function FoodSearch() {
         <div className={`rounded-xl px-4 py-3 text-sm ${actionMessage.isError ? "bg-red-500/10 text-red-300" : "bg-emerald-500/10 text-emerald-300"}`}>
           {actionMessage.text}
         </div>
+      )}
+
+      {scanning && (
+        <BarcodeScanner
+          onScan={handleBarcodeScan}
+          onClose={() => setScanning(false)}
+        />
       )}
     </div>
   );

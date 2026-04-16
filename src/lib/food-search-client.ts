@@ -218,6 +218,38 @@ async function searchUSDA(query: string): Promise<SearchResult[]> {
   }
 }
 
+// ─── Barcode lookup (Open Food Facts) ──────────────────────
+
+export async function lookupBarcode(barcode: string): Promise<SearchResult | null> {
+  const url = `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!response.ok) throw new Error(`OFF barcode lookup failed: ${response.status}`);
+    const data = await response.json();
+
+    if (data.status !== 1 || !data.product) return null;
+
+    const product = data.product;
+    if (!product.product_name || !product.nutriments) return null;
+
+    return {
+      code: product.code || barcode,
+      product_name: product.product_name,
+      brands: product.brands,
+      serving_size: product.serving_size || undefined,
+      nutriments: product.nutriments,
+      image_small_url: product.image_small_url || product.image_front_small_url || undefined,
+      source: "OFF",
+    } as SearchResult;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Combined search ────────────────────────────────────────
 
 function dedupKey(name: string): string {
