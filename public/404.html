@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <script>
+    // GitHub Pages SPA fallback: redirect all 404s to the root with the path encoded
+    // so the app can handle client-side routing
+    var path = window.location.pathname;
+    var base = '/macro-calorie-tracker';
+    
+    // If we're on a sub-path that should be handled by the SPA,
+    // redirect to the root and let the app handle it
+    if (path.startsWith(base) && path !== base && path !== base + '/') {
+      // Store the intended path so the app can restore it
+      sessionStorage.setItem('spa-redirect', path.slice(base.length));
+      window.location.replace(base + '/');
+    }
+  </script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>

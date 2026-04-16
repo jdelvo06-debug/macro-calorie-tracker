@@ -4,6 +4,8 @@ import { getFoodLogById, type FoodLogEntry } from "../lib/db-client";
 
 import { MEAL_LABELS } from "../lib/types";
 
+const base = '/macro-calorie-tracker/';
+
 interface Props {
   foodId: string;
 }
@@ -64,7 +66,7 @@ export default function NutritionDetail({ foodId }: Props) {
     return (
       <div className="rounded-2xl bg-surface border border-border-subtle p-8 text-center">
         <p className="text-zinc-400">{error || "Food item not found."}</p>
-        <a href="/diary" className="text-emerald-400 text-sm mt-2 inline-block hover:underline">
+        <a href={`${base}diary`} className="text-emerald-400 text-sm mt-2 inline-block hover:underline">
           Back to diary
         </a>
       </div>
@@ -109,7 +111,7 @@ export default function NutritionDetail({ foodId }: Props) {
       )}
 
       <div>
-        <a href="/diary" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1 mb-3">
+        <a href={`${base}diary`} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors inline-flex items-center gap-1 mb-3">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>

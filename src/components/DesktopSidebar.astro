@@ -6,21 +6,21 @@ interface Props {
 const { activeTab } = Astro.props;
 
 const links = [
-  { href: '/', id: 'dashboard', label: 'Dashboard', icon: 'home' },
-  { href: '/log', id: 'log', label: 'Log Food', icon: 'plus' },
-  { href: '/diary', id: 'diary', label: 'Diary', icon: 'book' },
-  { href: '/weight', id: 'weight', label: 'Weight', icon: 'chart' },
-  { href: '/goals', id: 'goals', label: 'Goals', icon: 'target' },
+  { href: '/macro-calorie-tracker/', id: 'dashboard', label: 'Dashboard', icon: 'home' },
+  { href: '/macro-calorie-tracker/log', id: 'log', label: 'Log Food', icon: 'plus' },
+  { href: '/macro-calorie-tracker/diary', id: 'diary', label: 'Diary', icon: 'book' },
+  { href: '/macro-calorie-tracker/weight', id: 'weight', label: 'Weight', icon: 'chart' },
+  { href: '/macro-calorie-tracker/goals', id: 'goals', label: 'Goals', icon: 'target' },
 ];
 
 const bottomLinks = [
-  { href: '/settings', id: 'settings', label: 'Settings', icon: 'settings' },
+  { href: '/macro-calorie-tracker/settings', id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 ---
 
 <aside class="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 bg-surface border-r border-border-subtle">
   <div class="p-6">
-    <a href="/" class="flex items-center gap-3">
+    <a href="/macro-calorie-tracker/" class="flex items-center gap-3">
       <div class="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center">
         <svg class="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { getFoodLogs, addFoodLog, updateFoodLog, deleteFoodLog, type FoodLogEntry } from "../lib/db-client";
 import { getGoals, type GoalsRow } from "../lib/db-client";
 import { addDays, parseDateKey, toDateKey } from "../lib/date";
+
+const base = '/macro-calorie-tracker/';
 import type { MealType } from "../lib/types";
 import { MEAL_LABELS, MEAL_ORDER } from "../lib/types";
 
@@ -390,7 +392,7 @@ export default function Diary() {
                 )}
 
                 <a
-                  href={`/log?date=${date}&meal=${group.type}`}
+                  href={`${base}log?date=${date}&meal=${group.type}`}
                   className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30 transition-colors border-t border-border-subtle"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

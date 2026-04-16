@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { getFoodLogs, type FoodLogEntry } from "../lib/db-client";
 import { getGoals, type GoalsRow } from "../lib/db-client";
 import { addDays, toDateKey, toFriendlyDate } from "../lib/date";
+
+const base = '/macro-calorie-tracker/';
 import { MEAL_LABELS, MEAL_ORDER } from "../lib/types";
 import MacroBar from "./MacroBar";
 import ProgressRing from "./ProgressRing";
@@ -99,7 +101,7 @@ export default function Dashboard() {
           </p>
         </div>
         <a
-          href={`/log?date=${today}&meal=breakfast`}
+          href={`${base}log?date=${today}&meal=breakfast`}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl text-sm font-medium hover:bg-emerald-500/20 active:scale-[0.98] transition-all"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -133,7 +135,7 @@ export default function Dashboard() {
           <div className="rounded-2xl bg-surface border border-border-subtle p-8 text-center">
             <p className="text-zinc-500 text-sm">No meals logged yet today.</p>
             <a
-              href={`/log?date=${today}&meal=breakfast`}
+              href={`${base}log?date=${today}&meal=breakfast`}
               className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-zinc-800 text-zinc-300 rounded-xl text-sm font-medium hover:bg-zinc-700 transition-colors"
             >
               Log your first meal

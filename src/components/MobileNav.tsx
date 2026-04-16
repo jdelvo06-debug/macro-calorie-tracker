@@ -4,16 +4,18 @@ interface Props {
   activeTab: string;
 }
 
+const base = '/macro-calorie-tracker/';
+
 const navItems = [
-  { href: "/", id: "dashboard", label: "Home" },
-  { href: "/log", id: "log", label: "Log" },
-  { href: "/diary", id: "diary", label: "Diary" },
-  { href: "/weight", id: "weight", label: "Weight" },
-  { href: "/goals", id: "goals", label: "Goals" },
+  { href: `${base}`, id: "dashboard", label: "Home" },
+  { href: `${base}log`, id: "log", label: "Log" },
+  { href: `${base}diary`, id: "diary", label: "Diary" },
+  { href: `${base}weight`, id: "weight", label: "Weight" },
+  { href: `${base}goals`, id: "goals", label: "Goals" },
 ];
 
 const moreItems = [
-  { href: "/settings", id: "settings", label: "Settings" },
+  { href: `${base}settings`, id: "settings", label: "Settings" },
 ];
 
 function HomeIcon({ active }: { active: boolean }) {
