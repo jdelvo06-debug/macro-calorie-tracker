@@ -1,77 +1,87 @@
-# Calorie Tracker
+# Macro Calorie Tracker
 
-Calorie and macro tracking web app built with Astro, React, Tailwind CSS, and SQLite/Turso persistence.
+A mobile-first calorie and macro tracking PWA. Log meals, track weight, set goals — all offline-first with optional cloud sync.
+
+**Live:** [jdelvo06-debug.github.io/macro-calorie-tracker](https://jdelvo06-debug.github.io/macro-calorie-tracker/)
 
 ## Features
 
-- Dashboard with calorie ring and macro progress bars
-- Food search powered by Open Food Facts
-- Diary grouped by breakfast, lunch, dinner, and snack
-- Inline diary editing and deletion
-- Nutrition detail view per logged item
-- Weight tracker with chart and goal-weight overlay
-- Goals page for calorie targets and macro split
-- Mobile bottom navigation and desktop sidebar
-- Theme toggle with persisted preference
+- **Food search** — USDA FoodData Central + Open Food Facts (50+ common foods with real serving sizes)
+- **Meal logging** — Breakfast, lunch, dinner, snack with date picker
+- **Diary** — Grouped daily view with inline edit/delete
+- **Weight tracker** — Chart with goal-weight overlay
+- **Goals** — Calorie targets, macro splits (protein/carbs/fat)
+- **Dashboard** — Calorie ring, macro progress, recent meals
+- **PWA** — Installable on iOS/Android, works offline
+- **Cloud sync** — Supabase backup (dual-write + pull on load)
+- **Dark theme** — With light mode toggle
 
 ## Stack
 
-- Astro + React
-- Tailwind CSS
-- `@libsql/client` for SQLite/Turso access
-- Chart.js
-- Vitest for unit tests
+- **Framework:** Astro (static output)
+- **UI:** React + Tailwind CSS
+- **Storage:** IndexedDB via Dexie (offline-first)
+- **Cloud sync:** Supabase (fire-and-forget dual-write)
+- **Food data:** USDA FoodData Central API + Open Food Facts API
+- **Charts:** Chart.js
+- **Hosting:** GitHub Pages (GitHub Actions auto-deploy)
 
-## Persistence modes
+## Architecture
 
-The app now uses an explicit database mode:
-
-- `DB_MODE=local` uses `data/local.db`
-- `DB_MODE=turso` requires both `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
-
-If `DB_MODE` is omitted, the app defaults to `local`.
-
-## Environment
-
-Create a `.env` file if you need non-default settings:
-
-```env
-SITE_URL=https://your-domain.example
-DB_MODE=local
-
-# Optional app-wide basic auth for private deployments
-APP_BASIC_AUTH_USERNAME=demo
-APP_BASIC_AUTH_PASSWORD=change-me
-
-# Only set this if you intentionally want a public, unauthenticated production demo
-ALLOW_PUBLIC_DEMO=false
-
-# Turso mode
-TURSO_DATABASE_URL=libsql://your-db.turso.io
-TURSO_AUTH_TOKEN=your-token
 ```
+Browser (IndexedDB) ←→ Supabase (cloud backup)
+      ↑
+  Food Search APIs (USDA + OFF)
+```
+
+- **Writes** go to IndexedDB first (instant, works offline), then async to Supabase
+- **On load / online** — pulls latest from Supabase to keep devices in sync
+- **No server** — fully static, no API routes
 
 ## Development
 
 ```sh
 npm install
+
+# Set env vars (or create .env)
+export SUPABASE_URL=https://your-project.supabase.co
+export SUPABASE_ANON_KEY=your-anon-key
+
 npm run dev
 ```
 
-The app runs at `http://localhost:4321` by default.
+Runs at `http://localhost:4321`.
 
-## Checks
+## Build & Deploy
 
-```sh
-npm run test:run
-npm run typecheck
-npm run build
+Push to `main` → GitHub Actions builds and deploys to GitHub Pages automatically.
+
+Manual workflow dispatch also available at [Actions](https://github.com/jdelvo06-debug/macro-calorie-tracker/actions).
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key (safe for frontend) |
+
+## Project Structure
+
+```
+src/
+  components/    React UI components
+  layouts/        Astro layouts (AppLayout with sync trigger)
+  lib/            Core logic (db-client, food-search, supabase)
+  pages/          Astro pages (index, log, diary, weight, goals, settings)
+public/
+  manifest.json   PWA manifest
+  sw.js           Service worker
+  icon-*.png      App icons
+.github/
+  workflows/
+    deploy.yml    GitHub Actions deployment
 ```
 
-## Deployment notes
+## License
 
-- Set `SITE_URL` in production so sitemap output uses the real domain.
-- Set `APP_BASIC_AUTH_USERNAME` and `APP_BASIC_AUTH_PASSWORD` if you want an app-wide login wall in front of the entire site.
-- Production builds fail closed at request time unless auth is configured or `ALLOW_PUBLIC_DEMO=true`.
-- This codebase is still a single-user demo app. It does **not** include per-user data isolation.
-- Do not deploy it as a shared multi-user product without adding real auth and user-scoped data access.
+MIT
