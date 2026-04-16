@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@astrojs/react": "^5.0.3",
+    "@ericblade/quagga2": "^1.12.1",
     "@fontsource-variable/outfit": "^5.2.8",
     "@supabase/supabase-js": "^2.103.2",
     "@tailwindcss/vite": "^4.2.2",
