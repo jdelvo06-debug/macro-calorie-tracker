@@ -7,6 +7,83 @@ import { type SearchResult } from "./open-food-facts";
 
 const USDA_API_KEY = "uMpM168GlNeOwaF2eVUxKHKftZ7NmFjoU6JF4cLG";
 
+// ─── Common serving size reference ──────────────────────────
+// Used when USDA doesn't provide a serving size
+
+const COMMON_SERVINGS: Record<string, { amount: number; unit: string; grams: number }> = {
+  // Meats
+  "bacon": { amount: 3, unit: "slices", grams: 34 },
+  "chicken breast": { amount: 1, unit: "breast", grams: 172 },
+  "chicken thigh": { amount: 1, unit: "thigh", grams: 136 },
+  "ground beef": { amount: 4, unit: "oz", grams: 113 },
+  "ground turkey": { amount: 4, unit: "oz", grams: 113 },
+  "steak": { amount: 6, unit: "oz", grams: 170 },
+  "pork chop": { amount: 1, unit: "chop", grams: 170 },
+  "sausage": { amount: 2, unit: "links", grams: 76 },
+  "ham": { amount: 3, unit: "oz", grams: 85 },
+  "turkey breast": { amount: 4, unit: "oz", grams: 113 },
+  "salmon": { amount: 6, unit: "oz", grams: 170 },
+  "tuna": { amount: 1, unit: "can", grams: 142 },
+  "shrimp": { amount: 4, unit: "oz", grams: 113 },
+  // Dairy
+  "milk": { amount: 1, unit: "cup", grams: 244 },
+  "whole milk": { amount: 1, unit: "cup", grams: 244 },
+  "egg": { amount: 1, unit: "large", grams: 50 },
+  "eggs": { amount: 2, unit: "large", grams: 100 },
+  "cheese": { amount: 1, unit: "oz", grams: 28 },
+  "cheddar cheese": { amount: 1, unit: "oz", grams: 28 },
+  "cottage cheese": { amount: 1, unit: "cup", grams: 226 },
+  "greek yogurt": { amount: 1, unit: "cup", grams: 227 },
+  "yogurt": { amount: 1, unit: "cup", grams: 227 },
+  "butter": { amount: 1, unit: "tbsp", grams: 14 },
+  "cream cheese": { amount: 2, unit: "tbsp", grams: 29 },
+  // Grains
+  "rice": { amount: 1, unit: "cup", grams: 158 },
+  "white rice": { amount: 1, unit: "cup", grams: 158 },
+  "brown rice": { amount: 1, unit: "cup", grams: 195 },
+  "bread": { amount: 1, unit: "slice", grams: 28 },
+  "oatmeal": { amount: 1, unit: "cup", grams: 234 },
+  "pasta": { amount: 1, unit: "cup", grams: 140 },
+  "cereal": { amount: 1, unit: "cup", grams: 40 },
+  "tortilla": { amount: 1, unit: "tortilla", grams: 45 },
+  "bagel": { amount: 1, unit: "bagel", grams: 105 },
+  "english muffin": { amount: 1, unit: "muffin", grams: 57 },
+  // Fruits
+  "banana": { amount: 1, unit: "medium", grams: 118 },
+  "apple": { amount: 1, unit: "medium", grams: 182 },
+  "orange": { amount: 1, unit: "medium", grams: 131 },
+  "strawberries": { amount: 1, unit: "cup", grams: 152 },
+  "blueberries": { amount: 1, unit: "cup", grams: 148 },
+  "grapes": { amount: 1, unit: "cup", grams: 151 },
+  "avocado": { amount: 0.5, unit: "avocado", grams: 100 },
+  // Vegetables
+  "broccoli": { amount: 1, unit: "cup", grams: 91 },
+  "spinach": { amount: 1, unit: "cup", grams: 30 },
+  "sweet potato": { amount: 1, unit: "medium", grams: 130 },
+  "potato": { amount: 1, unit: "medium", grams: 173 },
+  "onion": { amount: 1, unit: "medium", grams: 110 },
+  "carrot": { amount: 1, unit: "medium", grams: 61 },
+  "lettuce": { amount: 2, unit: "cups", grams: 72 },
+  "tomato": { amount: 1, unit: "medium", grams: 123 },
+  // Nuts & Seeds
+  "peanut butter": { amount: 2, unit: "tbsp", grams: 32 },
+  "almonds": { amount: 1, unit: "oz", grams: 28 },
+  "peanuts": { amount: 1, unit: "oz", grams: 28 },
+  "walnuts": { amount: 1, unit: "oz", grams: 28 },
+  // Drinks
+  "coffee": { amount: 1, unit: "cup", grams: 240 },
+  "protein powder": { amount: 1, unit: "scoop", grams: 30 },
+  "protein shake": { amount: 1, unit: "scoop", grams: 30 },
+};
+
+function findServingSize(description: string): { amount: number; unit: string; grams: number } | null {
+  const lower = description.toLowerCase();
+  for (const [key, serving] of Object.entries(COMMON_SERVINGS)) {
+    if (lower.includes(key)) return serving;
+  }
+  return null;
+}
+
 // ─── Open Food Facts (direct browser call) ──────────────────
 
 async function searchOpenFoodFacts(query: string): Promise<SearchResult[]> {
@@ -53,18 +130,48 @@ function getNutrient(nutrients: Array<{ nutrientId: number; value: number }>, id
 
 function normalizeUsdaFood(food: UsdaFood): SearchResult {
   const brand = food.brandName || food.brandOwner;
-  const servingLabel =
-    food.servingSize && food.servingSizeUnit
-      ? `${food.servingSize}${food.servingSizeUnit}`
-      : "100g";
 
-  const calories = getNutrient(food.foodNutrients, NUTRIENT_IDS.calories);
-  const protein = getNutrient(food.foodNutrients, NUTRIENT_IDS.protein);
-  const carbs = getNutrient(food.foodNutrients, NUTRIENT_IDS.carbs);
-  const fat = getNutrient(food.foodNutrients, NUTRIENT_IDS.fat);
-  const fiber = getNutrient(food.foodNutrients, NUTRIENT_IDS.fiber);
-  const sugar = getNutrient(food.foodNutrients, NUTRIENT_IDS.sugar);
-  const sodium = getNutrient(food.foodNutrients, NUTRIENT_IDS.sodium);
+  // USDA returns nutrients per 100g. We need to convert to per-serving.
+  const per100g = {
+    calories: getNutrient(food.foodNutrients, NUTRIENT_IDS.calories),
+    protein: getNutrient(food.foodNutrients, NUTRIENT_IDS.protein),
+    carbs: getNutrient(food.foodNutrients, NUTRIENT_IDS.carbs),
+    fat: getNutrient(food.foodNutrients, NUTRIENT_IDS.fat),
+    fiber: getNutrient(food.foodNutrients, NUTRIENT_IDS.fiber),
+    sugar: getNutrient(food.foodNutrients, NUTRIENT_IDS.sugar),
+    sodium: getNutrient(food.foodNutrients, NUTRIENT_IDS.sodium),
+  };
+
+  // Determine serving size
+  let servingGrams: number;
+  let servingLabel: string;
+
+  if (food.servingSize && food.servingSizeUnit) {
+    servingGrams = food.servingSize;
+    servingLabel = `${food.servingSize}${food.servingSizeUnit}`;
+  } else {
+    const common = findServingSize(food.description);
+    if (common) {
+      servingGrams = common.grams;
+      servingLabel = `${common.amount} ${common.unit}`;
+    } else {
+      // Last resort: use 100g
+      servingGrams = 100;
+      servingLabel = "100g";
+    }
+  }
+
+  // Convert per-100g to per-serving
+  const ratio = servingGrams / 100;
+  const perServing = {
+    calories: Math.round(per100g.calories * ratio * 10) / 10,
+    protein: Math.round(per100g.protein * ratio * 10) / 10,
+    carbs: Math.round(per100g.carbs * ratio * 10) / 10,
+    fat: Math.round(per100g.fat * ratio * 10) / 10,
+    fiber: Math.round(per100g.fiber * ratio * 10) / 10,
+    sugar: Math.round(per100g.sugar * ratio * 10) / 10,
+    sodium: Math.round(per100g.sodium * ratio * 10) / 10,
+  };
 
   return {
     code: `usda-${food.fdcId}`,
@@ -72,20 +179,20 @@ function normalizeUsdaFood(food: UsdaFood): SearchResult {
     brands: brand,
     serving_size: servingLabel,
     nutriments: {
-      "energy-kcal_serving": calories,
-      "energy-kcal_100g": calories,
-      proteins_serving: protein,
-      proteins_100g: protein,
-      carbohydrates_serving: carbs,
-      carbohydrates_100g: carbs,
-      fat_serving: fat,
-      fat_100g: fat,
-      fiber_serving: fiber,
-      fiber_100g: fiber,
-      sugars_serving: sugar,
-      sugars_100g: sugar,
-      sodium_serving: sodium,
-      sodium_100g: sodium,
+      "energy-kcal_serving": perServing.calories,
+      "energy-kcal_100g": per100g.calories,
+      proteins_serving: perServing.protein,
+      proteins_100g: per100g.protein,
+      carbohydrates_serving: perServing.carbs,
+      carbohydrates_100g: per100g.carbs,
+      fat_serving: perServing.fat,
+      fat_100g: per100g.fat,
+      fiber_serving: perServing.fiber,
+      fiber_100g: per100g.fiber,
+      sugars_serving: perServing.sugar,
+      sugars_100g: per100g.sugar,
+      sodium_serving: perServing.sodium,
+      sodium_100g: per100g.sodium,
     },
     source: "USDA",
   };

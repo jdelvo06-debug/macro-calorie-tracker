@@ -87,8 +87,17 @@ export default function FoodSearch() {
     debounceRef.current = setTimeout(() => search(value), 400);
   }
 
-  function getCalsPer(product: SearchResult): number {
-    return product.nutriments["energy-kcal_serving"] || product.nutriments["energy-kcal_100g"] || 0;
+  function getCalsPer(product: SearchResult): { value: number; label: string } {
+    const perServing = product.nutriments["energy-kcal_serving"];
+    const per100g = product.nutriments["energy-kcal_100g"];
+    const serving = getServingSize(product);
+
+    // If we have per-serving data and a real serving size (not just "100g")
+    if (perServing && serving !== "100g") {
+      return { value: Math.round(perServing), label: `per ${serving}` };
+    }
+
+    return { value: Math.round(per100g || perServing || 0), label: `per 100g` };
   }
 
   async function addFood(product: SearchResult) {
@@ -234,8 +243,8 @@ export default function FoodSearch() {
                     </span>
                   )}
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-xs font-mono text-zinc-400">{Math.round(calories)} kcal</span>
-                    <span className="text-xs text-zinc-600">per {getServingSize(product)}</span>
+                    <span className="text-xs font-mono text-zinc-400">{calories.value} kcal</span>
+                    <span className="text-xs text-zinc-600">{calories.label}</span>
                   </div>
                 </div>
               </div>
