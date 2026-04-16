@@ -42,6 +42,13 @@ const { title, activeTab = 'dashboard' } = Astro.props;
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
       }
     </script>
+    <script>
+      import { syncFromCloud } from '../lib/db-client';
+      // Pull latest data from Supabase on page load
+      syncFromCloud().catch(() => {});
+      // Also sync when coming back online
+      window.addEventListener('online', () => syncFromCloud().catch(() => {}));
+    </script>
     <div class="flex min-h-[100dvh]">
       <ThemeToggle client:load />
       <!-- Desktop sidebar -->
