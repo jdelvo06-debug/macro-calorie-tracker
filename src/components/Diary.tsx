@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 
-import { apiRequest, messageFromError } from "../lib/api";
+import { getFoodLogs, addFoodLog, updateFoodLog, deleteFoodLog, type FoodLogEntry } from "../lib/db-client";
+import { getGoals, type GoalsRow } from "../lib/db-client";
 import { addDays, parseDateKey, toDateKey } from "../lib/date";
-import type { FoodLog, Goals, MealType } from "../lib/types";
+import type { MealType } from "../lib/types";
 import { MEAL_LABELS, MEAL_ORDER } from "../lib/types";
 
 interface EditDraft {
-  id: number;
+  id?: number;
   date: string;
   meal_type: MealType;
   food_name: string;
@@ -24,7 +25,7 @@ interface EditDraft {
   barcode: string | null;
 }
 
-function toEditDraft(item: FoodLog): EditDraft {
+function toEditDraft(item: FoodLogEntry): EditDraft {
   return {
     id: item.id,
     date: item.date,
@@ -47,14 +48,14 @@ function toEditDraft(item: FoodLog): EditDraft {
 
 export default function Diary() {
   const [date, setDate] = useState(toDateKey());
-  const [logs, setLogs] = useState<FoodLog[]>([]);
-  const [goals, setGoals] = useState<Goals | null>(null);
+  const [logs, setLogs] = useState<FoodLogEntry[]>([]);
+  const [goals, setGoals] = useState<GoalsRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | undefined>(undefined);
+  const [confirmDelete, setConfirmDelete] = useState<number | undefined>(undefined);
+  const [savingId, setSavingId] = useState<number | undefined>(undefined);
+  const [editingId, setEditingId] = useState<number | undefined>(undefined);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [actionMessage, setActionMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -64,13 +65,13 @@ export default function Diary() {
 
     try {
       const [logsData, goalsData] = await Promise.all([
-        apiRequest<FoodLog[]>(`/api/food-log?date=${nextDate}`),
-        apiRequest<Goals>("/api/goals"),
+        getFoodLogs(nextDate),
+        getGoals(),
       ]);
       setLogs(logsData);
       setGoals(goalsData);
     } catch (nextError) {
-      setError(messageFromError(nextError));
+      setError(nextError instanceof Error ? nextError.message : "Failed to load data.");
       setLogs([]);
       setGoals(null);
     } finally {
@@ -82,63 +83,53 @@ export default function Diary() {
     void loadData(date);
   }, [date]);
 
-  async function deleteEntry(id: number) {
+  async function handleDeleteEntry(id: number | undefined) {
+    if (!id) return;
     setDeleting(id);
     setActionMessage(null);
 
     try {
-      await apiRequest(`/api/food-log?id=${id}`, { method: "DELETE" });
+      await deleteFoodLog(id);
       setLogs((current) => current.filter((item) => item.id !== id));
       setActionMessage({ text: "Entry deleted.", isError: false });
       if (editingId === id) {
-        setEditingId(null);
+        setEditingId(undefined);
         setDraft(null);
       }
     } catch (nextError) {
-      setActionMessage({ text: messageFromError(nextError), isError: true });
+      setActionMessage({ text: nextError instanceof Error ? nextError.message : "Failed to delete.", isError: true });
     } finally {
-      setDeleting(null);
+      setDeleting(undefined);
     }
   }
 
   async function saveEdit() {
-    if (!draft) {
-      return;
-    }
+    if (!draft) return;
 
     setSavingId(draft.id);
     setActionMessage(null);
 
     try {
-      await apiRequest("/api/food-log", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...draft,
-          brand: draft.brand || null,
-          serving_size: draft.serving_size || null,
-        }),
+      await updateFoodLog({
+        ...draft,
+        brand: draft.brand || null,
+        serving_size: draft.serving_size || null,
       });
 
       setLogs((current) =>
         current.map((item) =>
           item.id === draft.id
-            ? {
-                ...item,
-                ...draft,
-                brand: draft.brand || null,
-                serving_size: draft.serving_size || null,
-              }
+            ? { ...item, ...draft, brand: draft.brand || null, serving_size: draft.serving_size || null }
             : item,
         ),
       );
-      setEditingId(null);
+      setEditingId(undefined);
       setDraft(null);
       setActionMessage({ text: "Entry updated.", isError: false });
     } catch (nextError) {
-      setActionMessage({ text: messageFromError(nextError), isError: true });
+      setActionMessage({ text: nextError instanceof Error ? nextError.message : "Failed to save.", isError: true });
     } finally {
-      setSavingId(null);
+      setSavingId(undefined);
     }
   }
 
@@ -241,7 +232,7 @@ export default function Diary() {
                       return (
                         <div key={item.id}>
                           <div className="flex items-start gap-3 px-5 py-3">
-                            <a href={`/food/${item.id}`} className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0">
                               <p className="text-sm text-zinc-200 truncate">{item.food_name}</p>
                               <div className="flex flex-wrap items-center gap-3 mt-1">
                                 <span className="text-xs font-mono text-zinc-500">
@@ -251,7 +242,7 @@ export default function Diary() {
                                 <span className="text-xs text-carbs/70">C {Math.round(item.carbs * item.servings)}g</span>
                                 <span className="text-xs text-fat/70">F {Math.round(item.fat * item.servings)}g</span>
                               </div>
-                            </a>
+                            </div>
                             <div className="flex shrink-0 items-center gap-2">
                               <button
                                 type="button"
@@ -268,7 +259,7 @@ export default function Diary() {
                                 <button
                                   type="button"
                                   aria-label={`Confirm delete ${item.food_name}`}
-                                  onClick={() => { setConfirmDelete(null); void deleteEntry(item.id); }}
+                                  onClick={() => { setConfirmDelete(undefined); if (item.id) void handleDeleteEntry(item.id); }}
                                   disabled={deleting === item.id}
                                   className="rounded-lg bg-red-500/20 border border-red-500/30 px-3 py-2 text-xs text-red-300 hover:bg-red-500/30 disabled:opacity-60"
                                 >
@@ -278,7 +269,7 @@ export default function Diary() {
                                 <button
                                   type="button"
                                   aria-label={`Delete ${item.food_name}`}
-                                  onClick={() => setConfirmDelete(item.id)}
+                                  onClick={() => item.id && setConfirmDelete(item.id)}
                                   className="rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
                                 >
                                   Delete
@@ -308,38 +299,11 @@ export default function Diary() {
                                 />
                               </label>
                               <label className="space-y-1">
-                                <span className="text-xs text-zinc-400">Date</span>
-                                <input
-                                  type="date"
-                                  value={draft.date}
-                                  onChange={(event) => setDraft((current) => current ? { ...current, date: event.target.value } : current)}
-                                  className="w-full rounded-xl bg-zinc-800/60 border border-border-subtle px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-600"
-                                />
-                              </label>
-                              <label className="space-y-1">
-                                <span className="text-xs text-zinc-400">Meal</span>
-                                <select
-                                  value={draft.meal_type}
-                                  onChange={(event) =>
-                                    setDraft((current) =>
-                                      current ? { ...current, meal_type: event.target.value as MealType } : current,
-                                    )
-                                  }
-                                  className="w-full rounded-xl bg-zinc-800/60 border border-border-subtle px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-600"
-                                >
-                                  {MEAL_ORDER.map((mealType) => (
-                                    <option key={mealType} value={mealType}>
-                                      {MEAL_LABELS[mealType]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label className="space-y-1">
                                 <span className="text-xs text-zinc-400">Servings</span>
                                 <input
                                   type="number"
-                                  min={0.5}
-                                  step={0.5}
+                                  min={0.25}
+                                  step={0.25}
                                   value={draft.servings}
                                   onChange={(event) =>
                                     setDraft((current) =>
@@ -388,31 +352,6 @@ export default function Diary() {
                                     </label>
                                   ))}
                                 </div>
-                                <div className="grid gap-3 md:grid-cols-3 mt-3">
-                                  {([
-                                    { key: "fiber", label: "Fiber", unit: "g" },
-                                    { key: "sugar", label: "Sugar", unit: "g" },
-                                    { key: "sodium", label: "Sodium", unit: "mg" },
-                                  ] as const).map((field) => (
-                                    <label key={field.key} className="space-y-1">
-                                      <span className="text-xs text-zinc-400">{field.label} ({field.unit})</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        step={0.1}
-                                        value={draft[field.key] ?? ""}
-                                        onChange={(event) =>
-                                          setDraft((current) =>
-                                            current
-                                              ? { ...current, [field.key]: event.target.value === "" ? null : Number(event.target.value) }
-                                              : current,
-                                          )
-                                        }
-                                        className="w-full rounded-xl bg-zinc-800/60 border border-border-subtle px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-600"
-                                      />
-                                    </label>
-                                  ))}
-                                </div>
                               </div>
                               <div className="md:col-span-2 flex flex-wrap gap-2">
                                 <button
@@ -426,7 +365,7 @@ export default function Diary() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setEditingId(null);
+                                    setEditingId(undefined);
                                     setDraft(null);
                                   }}
                                   className="rounded-xl border border-border-subtle px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800/50"

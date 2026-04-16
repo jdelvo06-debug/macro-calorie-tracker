@@ -26,3 +26,9 @@ pnpm-debug.log*
 # local database
 data/
 *.db
+
+# Data
+data/
+
+# Build
+dist/

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Chart, registerables } from "chart.js";
 
-import { apiRequest, messageFromError } from "../lib/api";
+import { getWeightEntries, addWeightEntry, deleteWeightEntry, type WeightEntryRow } from "../lib/db-client";
+import { getGoals, type GoalsRow } from "../lib/db-client";
 import { parseDateKey, toDateKey } from "../lib/date";
-import type { Goals, WeightEntry } from "../lib/types";
 
 Chart.register(...registerables);
 
 export default function WeightTracker() {
-  const [entries, setEntries] = useState<WeightEntry[]>([]);
-  const [goals, setGoals] = useState<Goals | null>(null);
+  const [entries, setEntries] = useState<WeightEntryRow[]>([]);
+  const [goals, setGoals] = useState<GoalsRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [weight, setWeight] = useState("");
   const [date, setDate] = useState(toDateKey());
@@ -28,13 +28,13 @@ export default function WeightTracker() {
 
     try {
       const [entriesData, goalsData] = await Promise.all([
-        apiRequest<WeightEntry[]>(`/api/weight?days=${days}`),
-        apiRequest<Goals>("/api/goals"),
+        getWeightEntries(days),
+        getGoals(),
       ]);
       setEntries(entriesData);
       setGoals(goalsData);
     } catch (nextError) {
-      setError(messageFromError(nextError));
+      setError(nextError instanceof Error ? nextError.message : "Failed to load data.");
       setEntries([]);
       setGoals(null);
     } finally {
@@ -147,32 +147,28 @@ export default function WeightTracker() {
     setActionMessage(null);
 
     try {
-      await apiRequest("/api/weight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, weight: parseFloat(weight) }),
-      });
+      await addWeightEntry(date, parseFloat(weight));
       setWeight("");
       setDate(toDateKey());
       setActionMessage({ text: "Weight entry saved.", isError: false });
       await loadData(range);
     } catch (nextError) {
-      setActionMessage({ text: messageFromError(nextError), isError: true });
+      setActionMessage({ text: nextError instanceof Error ? nextError.message : "Failed to save.", isError: true });
     } finally {
       setSaving(false);
     }
   }
 
-  async function deleteEntry(id: number) {
+  async function handleDeleteEntry(id: number) {
     setDeletingId(id);
     setActionMessage(null);
 
     try {
-      await apiRequest(`/api/weight?id=${id}`, { method: "DELETE" });
+      await deleteWeightEntry(id);
       setEntries((current) => current.filter((entry) => entry.id !== id));
       setActionMessage({ text: "Weight entry deleted.", isError: false });
     } catch (nextError) {
-      setActionMessage({ text: messageFromError(nextError), isError: true });
+      setActionMessage({ text: nextError instanceof Error ? nextError.message : "Failed to delete.", isError: true });
     } finally {
       setDeletingId(null);
     }
@@ -227,7 +223,7 @@ export default function WeightTracker() {
           </label>
           <button
             type="button"
-            onClick={() => void logWeight()}
+            onClick={() => logWeight()}
             disabled={saving || !weight}
             className="px-6 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
           >
@@ -260,8 +256,7 @@ export default function WeightTracker() {
                 <div className="rounded-xl bg-surface border border-border-subtle p-4">
                   <p className="text-xs text-zinc-500 mb-1">Change ({range}d)</p>
                   <p className={`text-xl font-semibold tracking-tight font-mono ${change < 0 ? "text-emerald-400" : change > 0 ? "text-red-400" : "text-zinc-400"}`}>
-                    {change > 0 ? "+" : ""}
-                    {change.toFixed(1)} lbs
+                    {change > 0 ? "+" : ""}{change.toFixed(1)} lbs
                   </p>
                 </div>
               )}
@@ -302,7 +297,7 @@ export default function WeightTracker() {
               </div>
               <div className="divide-y divide-border-subtle max-h-64 overflow-y-auto">
                 {[...entries].reverse().map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between px-5 py-3">
+                  <div key={entry.id ?? entry.date} className="flex items-center justify-between px-5 py-3">
                     <div>
                       <span className="text-sm text-zinc-300 font-mono">{entry.weight} lbs</span>
                       <span className="text-xs text-zinc-600 ml-3">
@@ -317,7 +312,7 @@ export default function WeightTracker() {
                       <button
                         type="button"
                         aria-label={`Confirm delete weight entry from ${entry.date}`}
-                        onClick={() => { setConfirmDeleteId(null); void deleteEntry(entry.id); }}
+                        onClick={() => { setConfirmDeleteId(null); if (entry.id) void handleDeleteEntry(entry.id); }}
                         disabled={deletingId === entry.id}
                         className="rounded-lg bg-red-500/20 border border-red-500/30 px-3 py-2 text-xs text-red-300 hover:bg-red-500/30 disabled:opacity-60"
                       >
@@ -327,7 +322,7 @@ export default function WeightTracker() {
                       <button
                         type="button"
                         aria-label={`Delete weight entry from ${entry.date}`}
-                        onClick={() => setConfirmDeleteId(entry.id)}
+                        onClick={() => entry.id && setConfirmDeleteId(entry.id)}
                         className="rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
                       >
                         Delete

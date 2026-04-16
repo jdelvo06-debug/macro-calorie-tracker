@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { apiRequest, messageFromError } from "../lib/api";
-import type { Goals } from "../lib/types";
+import { getGoals, updateGoals, type GoalsRow } from "../lib/db-client";
 
 export default function GoalsSettings() {
   const [loading, setLoading] = useState(true);
@@ -21,14 +20,14 @@ export default function GoalsSettings() {
       setError(null);
 
       try {
-        const data = await apiRequest<Goals>("/api/goals");
+        const data = await getGoals();
         setCalories(data.daily_calories ?? 2000);
         setProteinPct(data.protein_pct ?? 30);
         setCarbsPct(data.carbs_pct ?? 40);
         setFatPct(data.fat_pct ?? 30);
         setGoalWeight(data.goal_weight?.toString() || "");
       } catch (nextError) {
-        setError(messageFromError(nextError));
+        setError(nextError instanceof Error ? nextError.message : "Failed to load goals.");
       } finally {
         setLoading(false);
       }
@@ -54,21 +53,17 @@ export default function GoalsSettings() {
     setError(null);
 
     try {
-      await apiRequest("/api/goals", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          daily_calories: calories,
-          protein_pct: proteinPct,
-          carbs_pct: carbsPct,
-          fat_pct: fatPct,
-          goal_weight: goalWeight ? parseFloat(goalWeight) : null,
-        }),
+      await updateGoals({
+        daily_calories: calories,
+        protein_pct: proteinPct,
+        carbs_pct: carbsPct,
+        fat_pct: fatPct,
+        goal_weight: goalWeight ? parseFloat(goalWeight) : null,
       });
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2000);
     } catch (nextError) {
-      setError(messageFromError(nextError));
+      setError(nextError instanceof Error ? nextError.message : "Failed to save.");
     } finally {
       setSaving(false);
     }
@@ -177,7 +172,7 @@ export default function GoalsSettings() {
                 <span className="text-xs text-zinc-500 font-mono">{Math.round(macro.grams)}g</span>
                 <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle">
                   <button type="button" onClick={() => macro.setPct(Math.max(0, macro.pct - 5))} className="px-2 py-1 text-zinc-400 hover:text-zinc-200">
-                    -
+                    −
                   </button>
                   <span className="px-2 py-1 text-sm font-mono text-zinc-300 min-w-[3rem] text-center">{macro.pct}%</span>
                   <button type="button" onClick={() => macro.setPct(Math.min(100, macro.pct + 5))} className="px-2 py-1 text-zinc-400 hover:text-zinc-200">
@@ -231,7 +226,7 @@ export default function GoalsSettings() {
       <div className="rounded-2xl bg-surface border border-border-subtle p-5 space-y-4">
         <h2 className="text-sm font-medium text-zinc-300">Goal Weight</h2>
         <label className="relative block">
-          <span className="sr-only">Goal weight in kilograms</span>
+          <span className="sr-only">Goal weight in pounds</span>
           <input
             type="number"
             step="0.1"

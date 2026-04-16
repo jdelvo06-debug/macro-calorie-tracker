@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
-import { apiRequest, messageFromError } from "../lib/api";
+import { getFoodLogs, type FoodLogEntry } from "../lib/db-client";
+import { getGoals, type GoalsRow } from "../lib/db-client";
 import { addDays, toDateKey, toFriendlyDate } from "../lib/date";
-import type { FoodLog, Goals } from "../lib/types";
 import { MEAL_LABELS, MEAL_ORDER } from "../lib/types";
 import MacroBar from "./MacroBar";
 import ProgressRing from "./ProgressRing";
@@ -15,8 +15,8 @@ function friendlyDate(dateKey: string): string {
 }
 
 export default function Dashboard() {
-  const [logs, setLogs] = useState<FoodLog[]>([]);
-  const [goals, setGoals] = useState<Goals | null>(null);
+  const [logs, setLogs] = useState<FoodLogEntry[]>([]);
+  const [goals, setGoals] = useState<GoalsRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,13 +29,13 @@ export default function Dashboard() {
 
       try {
         const [logsData, goalsData] = await Promise.all([
-          apiRequest<FoodLog[]>(`/api/food-log?date=${today}`),
-          apiRequest<Goals>("/api/goals"),
+          getFoodLogs(today),
+          getGoals(),
         ]);
         setLogs(logsData);
         setGoals(goalsData);
       } catch (nextError) {
-        setError(messageFromError(nextError));
+        setError(nextError instanceof Error ? nextError.message : "Failed to load data.");
         setLogs([]);
         setGoals(null);
       } finally {
@@ -150,9 +150,8 @@ export default function Dashboard() {
                 </div>
                 <div className="divide-y divide-border-subtle">
                   {group.items.map((item) => (
-                    <a
+                    <div
                       key={item.id}
-                      href={`/food/${item.id}`}
                       className="flex items-center justify-between px-5 py-3 hover:bg-zinc-800/30 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
@@ -164,11 +163,8 @@ export default function Dashboard() {
                           {item.servings !== 1 ? `${item.servings}x ` : ""}
                           {Math.round(item.calories * item.servings)} kcal
                         </span>
-                        <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                        </svg>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </div>
               </div>

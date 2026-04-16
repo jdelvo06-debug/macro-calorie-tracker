@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-import { apiRequest, messageFromError } from "../lib/api";
-import { isDateKey, toDateKey, toFriendlyDate } from "../lib/date";
+import { addFoodLog, type FoodLogEntry } from "../lib/db-client";
+import { searchFoods } from "../lib/food-search-client";
 import { getServingSize, toFoodLogPayload } from "../lib/open-food-facts";
 import type { MealType } from "../lib/types";
 import { MEAL_LABELS, MEAL_ORDER } from "../lib/types";
 import { isMealType } from "../lib/validation";
+import { isDateKey, toDateKey, toFriendlyDate } from "../lib/date";
 import type { SearchResult } from "../lib/open-food-facts";
 
 export default function FoodSearch() {
@@ -57,27 +58,20 @@ export default function FoodSearch() {
     setSearchError(null);
 
     try {
-      const response = await fetch(`/api/food-search?q=${encodeURIComponent(q)}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error("Food search failed.");
-      }
+      const data = await searchFoods(q);
 
       if (requestId !== searchRequestId.current) {
         return;
       }
 
-      setResults(
-        (data as SearchResult[]).filter((product) => product.product_name && product.nutriments),
-      );
-    } catch (error) {
+      setResults(data.filter((product) => product.product_name && product.nutriments));
+    } catch (err) {
       if (requestId !== searchRequestId.current) {
         return;
       }
 
       setResults([]);
-      setSearchError(messageFromError(error));
+      setSearchError(err instanceof Error ? err.message : "Search failed.");
     } finally {
       if (requestId === searchRequestId.current) {
         setSearching(false);
@@ -110,14 +104,10 @@ export default function FoodSearch() {
     });
 
     try {
-      await apiRequest("/api/food-log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      await addFoodLog(payload);
       setActionMessage({ text: `Added to ${MEAL_LABELS[selectedMeal]} on ${toFriendlyDate(selectedDate)}.`, isError: false });
     } catch (error) {
-      setActionMessage({ text: messageFromError(error), isError: true });
+      setActionMessage({ text: error instanceof Error ? error.message : "Failed to add food.", isError: true });
     } finally {
       setAdding(null);
     }
@@ -127,7 +117,7 @@ export default function FoodSearch() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Log Food</h1>
-        <p className="text-sm text-zinc-500 mt-1">Search the Open Food Facts database</p>
+        <p className="text-sm text-zinc-500 mt-1">Search the USDA & Open Food Facts database</p>
         <p className="text-xs text-zinc-400 mt-3">
           Logging for <span className="text-zinc-200">{toFriendlyDate(selectedDate)}</span> in{" "}
           <span className="text-emerald-400">{MEAL_LABELS[selectedMeal]}</span>
@@ -145,7 +135,7 @@ export default function FoodSearch() {
           />
         </label>
         <div className="rounded-xl border border-border-subtle bg-surface px-4 py-3 text-xs text-zinc-500 self-end">
-          Add multiple items if needed. Nothing is locked after one add anymore.
+          Add multiple items if needed. Nothing is locked after one add.
         </div>
       </div>
 
@@ -260,12 +250,12 @@ export default function FoodSearch() {
                       onClick={() =>
                         setServings((current) => ({
                           ...current,
-                          [product.code]: Math.max(0.5, (current[product.code] || 1) - 0.5),
+                          [product.code]: Math.max(0.25, (current[product.code] || 1) - 0.5),
                         }))
                       }
                       className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
                     >
-                      -
+                      −
                     </button>
                     <span className="px-2 py-1 text-sm font-mono text-zinc-300 min-w-[2rem] text-center">
                       {servingCount}

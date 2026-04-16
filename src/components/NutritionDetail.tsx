@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { apiRequest, messageFromError } from "../lib/api";
-import type { FoodLog } from "../lib/types";
+import { getFoodLogById, type FoodLogEntry } from "../lib/db-client";
+
 import { MEAL_LABELS } from "../lib/types";
 
 interface Props {
@@ -38,10 +38,10 @@ export default function NutritionDetail({ foodId }: Props) {
       setError(null);
 
       try {
-        const data = await apiRequest<FoodLog>(`/api/food-item?id=${foodId}`);
+        const data = await getFoodLogById(Number(foodId));
         setItem(data);
       } catch (nextError) {
-        setError(messageFromError(nextError));
+        setError(nextError instanceof Error ? nextError.message : "Failed to load.");
         setItem(null);
       } finally {
         setLoading(false);
