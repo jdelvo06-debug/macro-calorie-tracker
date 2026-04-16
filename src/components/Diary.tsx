@@ -237,9 +237,14 @@ export default function Diary() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-zinc-200 truncate">{item.food_name}</p>
                               <div className="flex flex-wrap items-center gap-3 mt-1">
-                                <span className="text-xs font-mono text-zinc-500">
-                                  {Math.round(item.calories * item.servings)} kcal
+                              <span className="text-xs font-mono text-zinc-500">
+                                {Math.round(item.calories * item.servings)} kcal
+                              </span>
+                              {item.servings !== 1 && (
+                                <span className="text-xs text-zinc-600">
+                                  {item.servings} × {item.serving_size || "serving"}
                                 </span>
+                              )}
                                 <span className="text-xs text-protein/70">P {Math.round(item.protein * item.servings)}g</span>
                                 <span className="text-xs text-carbs/70">C {Math.round(item.carbs * item.servings)}g</span>
                                 <span className="text-xs text-fat/70">F {Math.round(item.fat * item.servings)}g</span>

@@ -192,6 +192,32 @@ export async function getFoodLogs(date: string) {
   });
 }
 
+/** Get recently logged foods, deduped by name (most recent first) */
+export async function getRecentFoods(limit = 20): Promise<FoodLogEntry[]> {
+  const db = await openDB();
+  const all = await new Promise<FoodLogEntry[]>((resolve, reject) => {
+    const transaction = db.transaction(STORES.foodLogs, "readonly");
+    const store = transaction.objectStore(STORES.foodLogs);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  // Dedupe by food_name, keep most recent entry
+  const seen = new Map<string, FoodLogEntry>();
+  for (const entry of all) {
+    const key = entry.food_name.toLowerCase().trim();
+    const existing = seen.get(key);
+    if (!existing || entry.created_at > existing.created_at) {
+      seen.set(key, entry);
+    }
+  }
+
+  return [...seen.values()]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, limit);
+}
+
 export async function addFoodLog(entry: Omit<FoodLogEntry, "id" | "created_at">) {
   const record = { ...entry, created_at: new Date().toISOString() };
 

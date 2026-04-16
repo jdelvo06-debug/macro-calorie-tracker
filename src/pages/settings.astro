@@ -1,6 +1,7 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
 import ThemeToggle from '../components/ThemeToggle';
+import DataManager from '../components/DataManager.tsx';
 
 const savedTheme = typeof Astro.locals !== 'undefined' ? undefined : undefined;
 ---
@@ -49,13 +50,11 @@ const savedTheme = typeof Astro.locals !== 'undefined' ? undefined : undefined;
       <p class="text-xs text-[var(--app-text-muted)]" id="current-unit"></p>
     </section>
 
-    <!-- Database Info -->
+    <!-- Data Export/Import -->
     <section class="rounded-2xl border border-border-subtle bg-surface-raised p-5 space-y-3">
-      <h2 class="text-lg font-semibold text-[var(--app-text)]">Database</h2>
-      <div class="space-y-2 text-sm text-[var(--app-text-soft)]">
-        <p>Mode: <span class="font-mono text-emerald-400" id="db-mode">{import.meta.env.DB_MODE || "local"}</span></p>
-        <p class="text-xs text-[var(--app-text-muted)]">All data is stored locally in your browser. Enable Turso for cloud sync.</p>
-      </div>
+      <h2 class="text-lg font-semibold text-[var(--app-text)]">Data</h2>
+      <p class="text-sm text-[var(--app-text-muted)]">Export your data as a backup, or import from a previous export.</p>
+      <DataManager client:load />
     </section>
 
     <!-- About -->
@@ -63,7 +62,7 @@ const savedTheme = typeof Astro.locals !== 'undefined' ? undefined : undefined;
       <h2 class="text-lg font-semibold text-[var(--app-text)]">About</h2>
       <div class="space-y-2 text-sm text-[var(--app-text-soft)]">
         <p>Macro — Calorie Tracker</p>
-        <p class="text-xs text-[var(--app-text-muted)]">Frankenmerge build. Best of Claude, Codex, and GLM.</p>
+        <p class="text-xs text-[var(--app-text-muted)]">Offline-first PWA with Supabase cloud sync.</p>
       </div>
     </section>
   </div>

@@ -162,9 +162,13 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center gap-4 ml-4 shrink-0">
                         <span className="text-xs text-zinc-500 font-mono">
-                          {item.servings !== 1 ? `${item.servings}x ` : ""}
                           {Math.round(item.calories * item.servings)} kcal
                         </span>
+                        {item.servings !== 1 && (
+                          <span className="text-xs text-zinc-600">
+                            {item.servings} × {item.serving_size || "serving"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
