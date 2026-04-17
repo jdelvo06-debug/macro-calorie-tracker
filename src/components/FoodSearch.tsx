@@ -678,7 +678,7 @@ export default function FoodSearch() {
                                 [key]: Math.max(0.25, (current[key] || item.servings) - 0.5),
                               }))
                             }
-                            className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+                            className="px-4 py-3 text-zinc-400 hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                           >
                             −
                           </button>
@@ -693,7 +693,7 @@ export default function FoodSearch() {
                                 [key]: (current[key] || item.servings) + 0.5,
                               }))
                             }
-                            className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+                            className="px-4 py-3 text-zinc-400 hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                           >
                             +
                           </button>
