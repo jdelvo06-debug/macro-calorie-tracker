@@ -309,6 +309,9 @@ export default function Diary() {
                                 <span className="text-xs text-zinc-400">Servings</span>
                                 <input
                                   type="number"
+                                  inputMode="decimal"
+                                  enterKeyHint="done"
+                                  onFocus={(e) => e.target.select()}
                                   min={0.25}
                                   step={0.25}
                                   value={draft.servings}
@@ -346,6 +349,9 @@ export default function Diary() {
                                       <span className="text-xs text-zinc-400">{field.label} ({field.unit})</span>
                                       <input
                                         type="number"
+                                  inputMode="decimal"
+                                  enterKeyHint="done"
+                                  onFocus={(e) => e.target.select()}
                                         min={0}
                                         step={0.1}
                                         value={draft[field.key]}
