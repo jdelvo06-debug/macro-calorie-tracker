@@ -258,7 +258,7 @@ export default function Diary() {
                                   setDraft(toEditDraft(item));
                                   setActionMessage(null);
                                 }}
-                                className="rounded-lg border border-border-subtle px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800/50"
+                                className="rounded-lg border border-border-subtle px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800/50 min-h-[44px]"
                               >
                                 Edit
                               </button>
@@ -268,7 +268,7 @@ export default function Diary() {
                                   aria-label={`Confirm delete ${item.food_name}`}
                                   onClick={() => { setConfirmDelete(undefined); if (item.id) void handleDeleteEntry(item.id); }}
                                   disabled={deleting === item.id}
-                                  className="rounded-lg bg-red-500/20 border border-red-500/30 px-3 py-2 text-xs text-red-300 hover:bg-red-500/30 disabled:opacity-60"
+                                  className="rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-3 text-sm text-red-300 hover:bg-red-500/30 disabled:opacity-60 min-h-[44px]"
                                 >
                                   {deleting === item.id ? "Deleting..." : "Confirm?"}
                                 </button>
@@ -277,7 +277,7 @@ export default function Diary() {
                                   type="button"
                                   aria-label={`Delete ${item.food_name}`}
                                   onClick={() => item.id && setConfirmDelete(item.id)}
-                                  className="rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
+                                  className="rounded-lg border border-red-500/20 px-4 py-3 text-sm text-red-300 hover:bg-red-500/10 min-h-[44px]"
                                 >
                                   Delete
                                 </button>

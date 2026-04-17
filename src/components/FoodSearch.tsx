@@ -619,7 +619,7 @@ export default function FoodSearch() {
                       type="button"
                       onClick={() => addFood(product)}
                       disabled={isAdding}
-                      className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60"
+                      className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60 min-h-[48px]"
                     >
                       {isAdding ? "Adding..." : `Add to ${MEAL_LABELS[selectedMeal]}`}
                     </button>
@@ -703,7 +703,7 @@ export default function FoodSearch() {
                         type="button"
                         onClick={() => addRecentItem(item)}
                         disabled={isAdding}
-                        className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60"
+                        className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-all active:scale-[0.98] bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-60 min-h-[48px]"
                       >
                         {isAdding ? "Adding..." : `Add to ${MEAL_LABELS[selectedMeal]}`}
                       </button>
