@@ -506,7 +506,7 @@ export default function FoodSearch() {
                               setServings((prev) => ({ ...prev, [product.code]: 4 }));
                             }
                           }}
-                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                          className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] min-w-[80px] ${
                             mode === m
                               ? "bg-zinc-700 text-zinc-100"
                               : "text-zinc-500 hover:text-zinc-300"
@@ -520,57 +520,96 @@ export default function FoodSearch() {
 
                     {/* Amount input */}
                     <div className="flex items-center gap-2">
-                      {mode === "servings" ? (
-                        <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle">
-                          <button
-                            type="button"
-                            aria-label={`Decrease servings for ${product.product_name}`}
-                            onClick={() =>
+                      {/* Stepper control for all modes - consistent mobile UX */}
+                      <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle min-h-[44px]">
+                        <button
+                          type="button"
+                          aria-label={`Decrease ${mode} for ${product.product_name}`}
+                          onClick={() => {
+                            if (mode === "servings") {
                               setServings((current) => ({
                                 ...current,
                                 [product.code]: Math.max(0.25, (current[product.code] || 1) - 0.5),
-                              }))
+                              }));
+                            } else if (mode === "grams") {
+                              setServings((current) => ({
+                                ...current,
+                                [product.code]: Math.max(5, (current[product.code] || 100) - 5),
+                              }));
+                            } else {
+                              setServings((current) => ({
+                                ...current,
+                                [product.code]: Math.max(0.5, (current[product.code] || 4) - 0.5),
+                              }));
                             }
-                            className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
-                          >
-                            −
-                          </button>
-                          <span className="px-2 py-1 text-sm font-mono text-zinc-300 min-w-[2rem] text-center">
-                            {amount}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Increase servings for ${product.product_name}`}
-                            onClick={() =>
+                          }}
+                          className="px-4 py-3 text-zinc-400 hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${mode} amount for ${product.product_name}`}
+                          onClick={() => {
+                            const input = document.getElementById(`${product.code}-amount-input`);
+                            if (input) {
+                              (input as HTMLInputElement).focus();
+                              (input as HTMLInputElement).select();
+                            }
+                          }}
+                          className="flex-1 px-2 py-3 text-sm font-mono text-zinc-300 min-w-[3rem] text-center hover:bg-zinc-700/50 transition-colors min-h-[44px]"
+                        >
+                          {amount}
+                        </button>
+                        <input
+                          id={`${product.code}-amount-input`}
+                          type="number"
+                          inputMode="decimal"
+                          enterKeyHint="done"
+                          min="0"
+                          step={mode === "oz" ? "0.5" : mode === "grams" ? "5" : "0.5"}
+                          value={amount}
+                          onChange={(e) =>
+                            setServings((current) => ({
+                              ...current,
+                              [product.code]: Math.max(0, parseFloat(e.target.value) || 0),
+                            }))
+                          }
+                          onFocus={(e) => {
+                            e.target.select();
+                          }}
+                          className="absolute opacity-0 pointer-events-none w-0 h-0"
+                          aria-hidden="true"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Increase ${mode} for ${product.product_name}`}
+                          onClick={() => {
+                            if (mode === "servings") {
                               setServings((current) => ({
                                 ...current,
                                 [product.code]: (current[product.code] || 1) + 0.5,
-                              }))
-                            }
-                            className="px-3 py-1 text-zinc-400 hover:text-zinc-200 transition-colors"
-                          >
-                            +
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            step={mode === "oz" ? "0.5" : "1"}
-                            value={amount}
-                            onChange={(e) =>
+                              }));
+                            } else if (mode === "grams") {
                               setServings((current) => ({
                                 ...current,
-                                [product.code]: Math.max(0, parseFloat(e.target.value) || 0),
-                              }))
+                                [product.code]: (current[product.code] || 100) + 5,
+                              }));
+                            } else {
+                              setServings((current) => ({
+                                ...current,
+                                [product.code]: (current[product.code] || 4) + 0.5,
+                              }));
                             }
-                            className="w-20 px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-border-subtle text-zinc-200 text-sm font-mono focus:outline-none focus:border-zinc-600"
-                            placeholder={mode === "grams" ? "100" : "4"}
-                          />
-                          <span className="text-xs text-zinc-500">{mode === "grams" ? "g" : "oz"}</span>
-                        </div>
-                      )}
+                          }}
+                          className="px-4 py-3 text-zinc-400 hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-xs text-zinc-500 ml-2">
+                        {mode === "grams" ? "g" : mode === "oz" ? "oz" : "servings"}
+                      </span>
                       <span className="text-xs text-zinc-500 ml-1">
                         ≈ {nutrition.calories} kcal
                       </span>
