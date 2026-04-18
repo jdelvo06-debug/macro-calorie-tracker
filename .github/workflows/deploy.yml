@@ -20,6 +20,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      USDA_FDC_API_KEY: ${{ secrets.USDA_FDC_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
