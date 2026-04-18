@@ -6,46 +6,32 @@ interface BarcodeScannerProps {
   onClose: () => void;
 }
 
-// Validate barcode formats we accept
-function isValidBarcode(code: string): boolean {
-  // Strip spaces and dashes first
-  const clean = code.replace(/[\s\-]/g, '');
-  // UPC-A: exactly 12 digits
-  if (/^\d{12}$/.test(clean)) return true;
-  // EAN-13: exactly 13 digits
-  if (/^\d{13}$/.test(clean)) return true;
-  // EAN-8: exactly 8 digits
-  if (/^\d{8}$/.test(clean)) return true;
-  // UPC-E: exactly 6 or 8 digits
-  if (/^\d{6}$/.test(clean)) return true;
-  // Code 128/39: alphanumeric 4+
-  if (/^[A-Za-z0-9]{4,20}$/.test(clean)) return true;
-  return false;
-}
-
-// Normalize barcode (strip spaces/dashes)
 function normalizeBarcode(code: string): string {
   return code.replace(/[\s\-]/g, '');
 }
 
-// EAN-13 check digit verification
-function verifyEAN13(code: string): boolean {
+function isValidBarcode(code: string): boolean {
   const clean = normalizeBarcode(code);
-  if (clean.length !== 13) return true; // not EAN-13, skip check
-  const digits = clean.split("").map(Number);
-  const check = digits.pop()!;
-  const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 1 : 3), 0);
-  return (10 - (sum % 10)) % 10 === check;
+  if (!/^\d+$/.test(clean)) return false;
+  if (clean.length === 12 || clean.length === 13 || clean.length === 8 || clean.length === 6) return true;
+  return false;
 }
 
-// UPC-A check digit verification
-function verifyUPCA(code: string): boolean {
+function verifyCheckDigit(code: string): boolean {
   const clean = normalizeBarcode(code);
-  if (clean.length !== 12) return true; // not UPC-A, skip check
-  const digits = clean.split("").map(Number);
-  const check = digits.pop()!;
-  const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
-  return (10 - (sum % 10)) % 10 === check;
+  if (clean.length === 13) {
+    const digits = clean.split("").map(Number);
+    const check = digits.pop()!;
+    const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 1 : 3), 0);
+    return (10 - (sum % 10)) % 10 === check;
+  }
+  if (clean.length === 12) {
+    const digits = clean.split("").map(Number);
+    const check = digits.pop()!;
+    const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+    return (10 - (sum % 10)) % 10 === check;
+  }
+  return true;
 }
 
 export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
@@ -55,6 +41,14 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
   const scannedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  function acceptCode(code: string) {
+    if (scannedRef.current) return;
+    scannedRef.current = true;
+    setScanning(false);
+    setFoundCode(code);
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+  }
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -63,7 +57,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     Quagga.init(
       {
         inputStream: {
-          name: "Live",
           type: "LiveStream",
           target: containerRef.current,
           constraints: {
@@ -71,7 +64,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
-
         },
         locator: {
           patchSize: "medium",
@@ -115,18 +107,10 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       const rawCode = result.codeResult.code;
       const code = normalizeBarcode(rawCode);
 
-      // Validate format
-      if (!isValidBarcode(code)) return;
+      if (!isValidBarcode(code) || !verifyCheckDigit(code)) return;
 
-      // Confirmed - single read is enough
-      scannedRef.current = true;
-      setScanning(false);
-      setFoundCode(code);
+      acceptCode(code);
 
-      // Vibrate
-      if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-
-      // Brief display of found code, then close
       setTimeout(() => {
         Quagga.stop().catch(() => {});
         onScan(code);
@@ -154,7 +138,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     try {
       const url = URL.createObjectURL(file);
 
-      // Quagga decodeSingle can take a URL directly
       const result = await Quagga.decodeSingle({
         src: url,
         numOfWorkers: 0,
@@ -180,9 +163,8 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       if (result?.codeResult?.code) {
         const rawCode = result.codeResult.code;
         const code = normalizeBarcode(rawCode);
-        if (isValidBarcode(code) && verifyEAN13(code) && verifyUPCA(code)) {
-          setFoundCode(code);
-          if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        if (isValidBarcode(code) && verifyCheckDigit(code)) {
+          acceptCode(code);
           setTimeout(() => {
             onScan(code);
             onClose();
@@ -199,7 +181,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 z-10">
         <h2 className="text-sm font-medium text-zinc-200">Scan Barcode</h2>
         <button
@@ -214,7 +195,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         </button>
       </div>
 
-      {/* Camera / Scanner View */}
       <div className="flex-1 relative overflow-hidden">
         {error ? (
           <div className="absolute inset-0 flex items-center justify-center px-8">
@@ -233,32 +213,25 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
           <div ref={containerRef} className="absolute inset-0" />
         )}
 
-        {/* Scan zone overlay */}
         {scanning && !error && (
           <div className="absolute inset-0 pointer-events-none">
-            {/* Dark vignette outside scan zone */}
             <div className="absolute inset-0 bg-black/40" />
 
-            {/* Clear center scan zone */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-[80%] max-w-[320px] h-[100px] relative">
-                {/* Cut out the center (make it transparent) */}
                 <div className="absolute inset-0 bg-black/0 rounded-lg" style={{ boxShadow: "0 0 0 9999px rgba(0,0,0,0.4)" }} />
 
-                {/* Corner brackets */}
                 <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-emerald-400 rounded-tl-md" />
                 <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-emerald-400 rounded-tr-md" />
                 <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-emerald-400 rounded-bl-md" />
                 <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-emerald-400 rounded-br-md" />
 
-                {/* Animated scan line */}
                 <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-bounce top-[50%]" />
               </div>
             </div>
           </div>
         )}
 
-        {/* Success flash */}
         {foundCode && (
           <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center pointer-events-none">
             <div className="px-6 py-3 rounded-xl bg-zinc-900/90 border border-emerald-500/40">
@@ -268,7 +241,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         )}
       </div>
 
-      {/* Footer */}
       <div className="px-4 py-4 bg-zinc-900 text-center space-y-3 z-10">
         {scanning && !error && (
           <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
@@ -289,7 +261,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
             />
           </label>
         </div>
-        <p className="text-xs text-zinc-600">Supports UPC-A, EAN-13, EAN-8, Code-128</p>
+        <p className="text-xs text-zinc-600">Supports UPC-A, EAN-13, EAN-8</p>
       </div>
     </div>
   );

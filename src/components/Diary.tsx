@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getFoodLogs, addFoodLog, updateFoodLog, deleteFoodLog, type FoodLogEntry } from "../lib/db-client";
+import { getFoodLogs, updateFoodLog, deleteFoodLog, type FoodLogEntry } from "../lib/db-client";
 import { getGoals, type GoalsRow } from "../lib/db-client";
 import { addDays, parseDateKey, toDateKey } from "../lib/date";
 
@@ -114,6 +114,7 @@ export default function Diary() {
     try {
       await updateFoodLog({
         ...draft,
+        created_at: new Date().toISOString(),
         brand: draft.brand || null,
         serving_size: draft.serving_size || null,
       });

@@ -13,6 +13,7 @@ export default defineConfig({
     define: {
       'import.meta.env.SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL),
       'import.meta.env.SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY),
+      'import.meta.env.USDA_FDC_API_KEY': JSON.stringify(process.env.USDA_FDC_API_KEY),
     },
   },
 });

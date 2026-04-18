@@ -213,9 +213,12 @@ export default function WeightTracker() {
             <span className="sr-only">Weight in pounds</span>
             <input
               type="number"
+              inputMode="decimal"
+              enterKeyHint="done"
               step="0.1"
               value={weight}
               onChange={(event) => setWeight(event.target.value)}
+              onFocus={(e) => e.target.select()}
               placeholder="Weight"
               className="w-full px-4 py-2.5 pr-12 rounded-xl bg-zinc-800/50 border border-border-subtle text-zinc-200 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600"
             />
@@ -225,7 +228,7 @@ export default function WeightTracker() {
             type="button"
             onClick={() => logWeight()}
             disabled={saving || !weight}
-            className="px-6 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50 min-h-[48px]"
           >
             {saving ? "Saving..." : "Log"}
           </button>

@@ -16,7 +16,7 @@ const STORES = {
   goals: "goals",
 } as const;
 
-function openDB(): Promise<IDBDatabase> {
+export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -44,7 +44,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-function tx<T>(storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function txPromise<T>(storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   return openDB().then(
     (db) =>
       new Promise((resolve, reject) => {
@@ -57,13 +57,33 @@ function tx<T>(storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjec
   );
 }
 
+/** Wait for a transaction to complete (not just a single request) */
+function txComplete(db: IDBDatabase, storeName: string, mode: IDBTransactionMode, fn: (store: IDBObjectStore) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
+    fn(store);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+export function getAllFromStore(db: IDBDatabase, storeName: string): Promise<unknown[]> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readonly");
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // ─── Sync Helpers ───────────────────────────────────────────
 
 function isOnline(): boolean {
   return typeof navigator !== "undefined" && navigator.onLine;
 }
 
-/** Silently sync to Supabase — never throws, logs errors to console */
 async function syncToCloud(table: string, data: Record<string, unknown>) {
   if (!isOnline()) return;
   try {
@@ -84,11 +104,22 @@ async function deleteFromCloud(table: string, id: number) {
   }
 }
 
-/** Pull all data from Supabase and merge into IndexedDB */
+/**
+ * Pull latest data from Supabase and merge into IndexedDB.
+ * Uses atomic transactions per store so a mid-sync page close
+ * doesn't leave a store empty — either all rows land or none.
+ *
+ * For each store, we fetch cloud data first, then write it
+ * in a single IDB transaction so it's all-or-nothing per table.
+ * Existing local-only entries (no cloud counterpart) are preserved
+ * via put semantics (cloud rows overwrite matching IDs).
+ */
 export async function syncFromCloud() {
   if (!isOnline()) return;
 
   try {
+    const db = await openDB();
+
     // Food logs
     const { data: foodLogs, error: foodError } = await supabase
       .from("food_log")
@@ -98,31 +129,29 @@ export async function syncFromCloud() {
     if (foodError) {
       console.error("[sync] food_log fetch failed:", foodError.message);
     } else if (foodLogs) {
-      const db = await openDB();
-      const transaction = db.transaction(STORES.foodLogs, "readwrite");
-      const store = transaction.objectStore(STORES.foodLogs);
-      store.clear();
-      for (const row of foodLogs) {
-        store.put({
-          id: row.id,
-          date: row.date,
-          meal_type: row.meal_type,
-          food_name: row.food_name,
-          brand: row.brand,
-          serving_size: row.serving_size,
-          servings: Number(row.servings),
-          calories: Number(row.calories),
-          protein: Number(row.protein),
-          carbs: Number(row.carbs),
-          fat: Number(row.fat),
-          fiber: row.fiber != null ? Number(row.fiber) : null,
-          sugar: row.sugar != null ? Number(row.sugar) : null,
-          sodium: row.sodium != null ? Number(row.sodium) : null,
-          vitamins: row.vitamins,
-          barcode: row.barcode,
-          created_at: row.created_at,
-        });
-      }
+      await txComplete(db, STORES.foodLogs, "readwrite", (store) => {
+        for (const row of foodLogs) {
+          store.put({
+            id: row.id,
+            date: row.date,
+            meal_type: row.meal_type,
+            food_name: row.food_name,
+            brand: row.brand,
+            serving_size: row.serving_size,
+            servings: Number(row.servings),
+            calories: Number(row.calories),
+            protein: Number(row.protein),
+            carbs: Number(row.carbs),
+            fat: Number(row.fat),
+            fiber: row.fiber != null ? Number(row.fiber) : null,
+            sugar: row.sugar != null ? Number(row.sugar) : null,
+            sodium: row.sodium != null ? Number(row.sodium) : null,
+            vitamins: row.vitamins,
+            barcode: row.barcode,
+            created_at: row.created_at,
+          });
+        }
+      });
     }
 
     // Weight entries
@@ -134,18 +163,16 @@ export async function syncFromCloud() {
     if (weightError) {
       console.error("[sync] weight_entries fetch failed:", weightError.message);
     } else if (weightEntries) {
-      const db = await openDB();
-      const transaction = db.transaction(STORES.weightEntries, "readwrite");
-      const store = transaction.objectStore(STORES.weightEntries);
-      store.clear();
-      for (const row of weightEntries) {
-        store.put({
-          id: row.id,
-          date: row.date,
-          weight: Number(row.weight),
-          created_at: row.created_at,
-        });
-      }
+      await txComplete(db, STORES.weightEntries, "readwrite", (store) => {
+        for (const row of weightEntries) {
+          store.put({
+            id: row.id,
+            date: row.date,
+            weight: Number(row.weight),
+            created_at: row.created_at,
+          });
+        }
+      });
     }
 
     // Goals
@@ -158,17 +185,16 @@ export async function syncFromCloud() {
     if (goalsError) {
       console.error("[sync] goals fetch failed:", goalsError.message);
     } else if (goals) {
-      const db = await openDB();
-      const transaction = db.transaction(STORES.goals, "readwrite");
-      const store = transaction.objectStore(STORES.goals);
-      store.put({
-        id: goals.id,
-        daily_calories: goals.daily_calories,
-        protein_pct: goals.protein_pct,
-        carbs_pct: goals.carbs_pct,
-        fat_pct: goals.fat_pct,
-        goal_weight: goals.goal_weight != null ? Number(goals.goal_weight) : null,
-        updated_at: goals.created_at,
+      await txComplete(db, STORES.goals, "readwrite", (store) => {
+        store.put({
+          id: goals.id,
+          daily_calories: goals.daily_calories,
+          protein_pct: goals.protein_pct,
+          carbs_pct: goals.carbs_pct,
+          fat_pct: goals.fat_pct,
+          goal_weight: goals.goal_weight != null ? Number(goals.goal_weight) : null,
+          updated_at: goals.created_at,
+        });
       });
     }
 
@@ -192,7 +218,6 @@ export async function getFoodLogs(date: string) {
   });
 }
 
-/** Get recently logged foods, deduped by name (most recent first) */
 export async function getRecentFoods(limit = 20): Promise<FoodLogEntry[]> {
   const db = await openDB();
   const all = await new Promise<FoodLogEntry[]>((resolve, reject) => {
@@ -203,7 +228,6 @@ export async function getRecentFoods(limit = 20): Promise<FoodLogEntry[]> {
     request.onerror = () => reject(request.error);
   });
 
-  // Dedupe by food_name, keep most recent entry
   const seen = new Map<string, FoodLogEntry>();
   for (const entry of all) {
     const key = entry.food_name.toLowerCase().trim();
@@ -221,33 +245,27 @@ export async function getRecentFoods(limit = 20): Promise<FoodLogEntry[]> {
 export async function addFoodLog(entry: Omit<FoodLogEntry, "id" | "created_at">) {
   const record = { ...entry, created_at: new Date().toISOString() };
 
-  // Save to IndexedDB first
-  const id = await tx(STORES.foodLogs, "readwrite", (store) => store.add(record)) as number;
+  const id = await txPromise(STORES.foodLogs, "readwrite", (store) => store.add(record)) as number;
 
-  // Sync to Supabase
   void syncToCloud("food_log", { ...record, id });
 
   return id;
 }
 
 export async function updateFoodLog(entry: FoodLogEntry) {
-  // IndexedDB
-  await tx(STORES.foodLogs, "readwrite", (store) => store.put(entry));
+  await txPromise(STORES.foodLogs, "readwrite", (store) => store.put(entry));
 
-  // Supabase
   void syncToCloud("food_log", { ...entry });
 }
 
 export async function deleteFoodLog(id: number) {
-  // IndexedDB
-  await tx(STORES.foodLogs, "readwrite", (store) => store.delete(id));
+  await txPromise(STORES.foodLogs, "readwrite", (store) => store.delete(id));
 
-  // Supabase
   void deleteFromCloud("food_log", id);
 }
 
 export async function getFoodLogById(id: number) {
-  return tx(STORES.foodLogs, "readonly", (store) => store.get(id)) as Promise<FoodLogEntry | undefined>;
+  return txPromise(STORES.foodLogs, "readonly", (store) => store.get(id)) as Promise<FoodLogEntry | undefined>;
 }
 
 // ─── Weight Entries ─────────────────────────────────────────
@@ -272,15 +290,16 @@ export async function getWeightEntries(days: number): Promise<WeightEntryRow[]> 
 export async function addWeightEntry(date: string, weight: number) {
   const entry = { date, weight, created_at: new Date().toISOString() };
 
-  // Check if entry exists for this date (Supabase has UNIQUE on date)
+  // Use put with the date index to upsert atomically
+  // (the date index has unique:true, so duplicate dates are prevented)
   const existing = await getWeightEntryByDate(date);
-  const id = existing?.id;
+  const record = existing
+    ? { ...entry, id: existing.id }
+    : entry;
 
-  // IndexedDB (put = upsert by key)
-  const result = await tx(STORES.weightEntries, "readwrite", (store) => store.put(id ? { ...entry, id } : entry)) as IDBValidKey;
+  const result = await txPromise(STORES.weightEntries, "readwrite", (store) => store.put(record)) as IDBValidKey;
 
-  // Supabase (upsert by date conflict)
-  void syncToCloud("weight_entries", { ...entry, ...(id ? { id } : {}) });
+  void syncToCloud("weight_entries", { ...record });
 
   return result;
 }
@@ -298,7 +317,7 @@ async function getWeightEntryByDate(date: string): Promise<WeightEntryRow | unde
 }
 
 export async function deleteWeightEntry(id: number) {
-  await tx(STORES.weightEntries, "readwrite", (store) => store.delete(id));
+  await txPromise(STORES.weightEntries, "readwrite", (store) => store.delete(id));
   void deleteFromCloud("weight_entries", id);
 }
 
@@ -315,16 +334,17 @@ const DEFAULT_GOALS: GoalsRow = {
 };
 
 export async function getGoals(): Promise<GoalsRow> {
-  const result = await tx(STORES.goals, "readonly", (store) => store.get(1)) as Promise<GoalsRow | undefined>;
-  return result ?? { ...DEFAULT_GOALS };
+  const raw = await txPromise(STORES.goals, "readonly", (store) => store.get(1));
+  const result = (raw as GoalsRow | undefined) ?? undefined;
+  if (result) return result;
+  return { ...DEFAULT_GOALS };
 }
 
 export async function updateGoals(goals: Partial<GoalsRow>): Promise<GoalsRow> {
   const current = await getGoals();
   const updated = { ...current, ...goals, updated_at: new Date().toISOString() };
-  await tx(STORES.goals, "readwrite", (store) => store.put(updated));
+  await txPromise(STORES.goals, "readwrite", (store) => store.put(updated));
 
-  // Supabase (id=1 always)
   void syncToCloud("goals", {
     id: 1,
     daily_calories: updated.daily_calories,

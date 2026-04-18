@@ -10,7 +10,6 @@ import { isMealType } from "../lib/validation";
 import { isDateKey, toDateKey, toFriendlyDate } from "../lib/date";
 import type { SearchResult } from "../lib/open-food-facts";
 
-const base = '/macro-calorie-tracker/';
 
 type Tab = "search" | "recent";
 type ServingMode = "servings" | "grams" | "oz";
@@ -207,11 +206,7 @@ export default function FoodSearch() {
       date: selectedDate,
       meal_type: selectedMeal,
       servings: nutrition.servings,
-    });
-
-    // Override with calculated values when using grams/oz mode
-    const finalPayload = {
-      ...payload,
+    }, {
       calories: nutrition.calories,
       protein: nutrition.protein,
       carbs: nutrition.carbs,
@@ -221,10 +216,10 @@ export default function FoodSearch() {
       sodium: nutrition.sodium,
       serving_size: nutrition.servingLabel,
       servings: nutrition.servings,
-    };
+    });
 
     try {
-      await addFoodLog(finalPayload);
+      await addFoodLog(payload);
       setActionMessage({ text: `Added to ${MEAL_LABELS[selectedMeal]} on ${toFriendlyDate(selectedDate)}.`, isError: false });
     } catch (error) {
       setActionMessage({ text: error instanceof Error ? error.message : "Failed to add food.", isError: true });
@@ -288,34 +283,7 @@ export default function FoodSearch() {
     }
   }
 
-  /** Convert a FoodLogEntry into a SearchResult-like object for the addFood function */
-  function recentToSearchResult(item: FoodLogEntry): SearchResult {
-    return {
-      code: `recent-${item.id}`,
-      product_name: item.food_name,
-      brands: item.brand || undefined,
-      serving_size: item.serving_size || undefined,
-      nutriments: {
-        "energy-kcal_serving": item.calories,
-        "energy-kcal_100g": item.calories,
-        proteins_serving: item.protein,
-        proteins_100g: item.protein,
-        carbohydrates_serving: item.carbs,
-        carbohydrates_100g: item.carbs,
-        fat_serving: item.fat,
-        fat_100g: item.fat,
-        fiber_serving: item.fiber,
-        fiber_100g: item.fiber,
-        sugars_serving: item.sugar,
-        sugars_100g: item.sugar,
-        sodium_serving: item.sodium,
-        sodium_100g: item.sodium,
-      },
-      source: "Recent",
-    };
-  }
-
-  return (
+return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Log Food</h1>

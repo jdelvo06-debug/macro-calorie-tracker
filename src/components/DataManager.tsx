@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getFoodLogs, addFoodLog, getWeightEntries, addWeightEntry, getGoals, updateGoals } from "../lib/db-client";
+import { addFoodLog, addWeightEntry, updateGoals, openDB, getAllFromStore } from "../lib/db-client";
 
 export default function DataManager() {
   const [exporting, setExporting] = useState(false);
@@ -10,7 +10,6 @@ export default function DataManager() {
     setExporting(true);
     setMessage(null);
     try {
-      // Get all data from IndexedDB
       const db = await openDB();
       const foodLogs = await getAllFromStore(db, "food_logs");
       const weightEntries = await getAllFromStore(db, "weight_entries");
@@ -58,14 +57,12 @@ export default function DataManager() {
       let foodCount = 0;
       let weightCount = 0;
 
-      // Import food logs (skip existing by creating new entries)
       for (const entry of data.food_log) {
         const { id, created_at, ...rest } = entry;
         await addFoodLog(rest);
         foodCount++;
       }
 
-      // Import weight entries
       if (data.weight_entries) {
         for (const entry of data.weight_entries) {
           const { id, created_at, ...rest } = entry;
@@ -74,7 +71,6 @@ export default function DataManager() {
         }
       }
 
-      // Import goals (overwrite)
       if (data.goals && data.goals.length > 0) {
         const { id, updated_at, ...rest } = data.goals[0];
         await updateGoals(rest);
@@ -85,7 +81,6 @@ export default function DataManager() {
       setMessage({ text: err instanceof Error ? err.message : "Import failed.", isError: true });
     } finally {
       setImporting(false);
-      // Reset the file input
       event.target.value = "";
     }
   }
@@ -125,27 +120,4 @@ export default function DataManager() {
       </p>
     </div>
   );
-}
-
-// ─── IndexedDB helpers (direct access for export) ─────────
-
-const DB_NAME = "macro-tracker";
-const DB_VERSION = 1;
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function getAllFromStore(db: IDBDatabase, storeName: string): Promise<unknown[]> {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, "readonly");
-    const store = tx.objectStore(storeName);
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
 }

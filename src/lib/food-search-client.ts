@@ -5,7 +5,7 @@
 
 import { type SearchResult } from "./open-food-facts";
 
-const USDA_API_KEY = "uMpM168GlNeOwaF2eVUxKHKftZ7NmFjoU6JF4cLG";
+const USDA_API_KEY = import.meta.env.USDA_FDC_API_KEY as string | undefined;
 
 // ─── Common serving size reference ──────────────────────────
 // Used when USDA doesn't provide a serving size
@@ -199,6 +199,11 @@ function normalizeUsdaFood(food: UsdaFood): SearchResult {
 }
 
 async function searchUSDA(query: string): Promise<SearchResult[]> {
+  if (!USDA_API_KEY) {
+    console.warn("USDA_FDC_API_KEY not set — skipping USDA search");
+    return [];
+  }
+
   const url = new URL("https://api.nal.usda.gov/fdc/v1/foods/search");
   url.searchParams.set("query", query);
   url.searchParams.set("pageSize", "10");

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { FoodLog } from "./types";
+import type { FoodLogEntry } from "./db-client";
 import type { MealType } from "./types";
 import { isDateKey, toDateKey } from "./date";
 
@@ -161,7 +161,7 @@ export function isMealType(value: string): value is MealType {
   return mealTypeSchema.safeParse(value).success;
 }
 
-export function mergeFoodLogUpdate(existing: FoodLog, update: FoodLogUpdateInput): FoodLogCreateInput {
+export function mergeFoodLogUpdate(existing: FoodLogEntry, update: FoodLogUpdateInput): FoodLogCreateInput {
   return {
     date: update.date ?? existing.date,
     meal_type: update.meal_type ?? existing.meal_type,

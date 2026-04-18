@@ -1,8 +1,11 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import FoodSearchView from '../components/FoodSearch';
 ---
 
 <AppLayout title="Log Food" activeTab="log">
-  <FoodSearchView client:load />
+  <ErrorBoundary client:load>
+    <FoodSearchView client:load />
+  </ErrorBoundary>
 </AppLayout>

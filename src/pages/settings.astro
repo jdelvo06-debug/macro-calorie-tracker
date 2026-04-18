@@ -1,9 +1,7 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
-import ThemeToggle from '../components/ThemeToggle';
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import DataManager from '../components/DataManager.tsx';
-
-const savedTheme = typeof Astro.locals !== 'undefined' ? undefined : undefined;
 ---
 
 <AppLayout title="Settings" activeTab="settings">
@@ -54,7 +52,9 @@ const savedTheme = typeof Astro.locals !== 'undefined' ? undefined : undefined;
     <section class="rounded-2xl border border-border-subtle bg-surface-raised p-5 space-y-3">
       <h2 class="text-lg font-semibold text-[var(--app-text)]">Data</h2>
       <p class="text-sm text-[var(--app-text-muted)]">Export your data as a backup, or import from a previous export.</p>
-      <DataManager client:load />
+      <ErrorBoundary client:load>
+        <DataManager client:load />
+      </ErrorBoundary>
     </section>
 
     <!-- About -->

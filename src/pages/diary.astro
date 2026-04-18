@@ -1,8 +1,11 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import DiaryView from '../components/Diary';
 ---
 
 <AppLayout title="Diary" activeTab="diary">
-  <DiaryView client:load />
+  <ErrorBoundary client:load>
+    <DiaryView client:load />
+  </ErrorBoundary>
 </AppLayout>

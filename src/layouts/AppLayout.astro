@@ -16,7 +16,7 @@ const { title, activeTab = 'dashboard' } = Astro.props;
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
     <title>{title} | Macro</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
@@ -25,14 +25,15 @@ const { title, activeTab = 'dashboard' } = Astro.props;
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Macro" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov https://*.supabase.co; font-src 'self' https://fonts.gstatic.com;" />
     <script is:inline>
       {
         `(function () {
-          const stored = localStorage.getItem("theme");
-          const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-          const theme = stored === "light" || stored === "dark" ? stored : (prefersLight ? "light" : "dark");
-          document.documentElement.dataset.theme = theme;
-        })();`
+           const stored = localStorage.getItem("theme");
+           const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+           const theme = stored === "light" || stored === "dark" ? stored : (prefersLight ? "light" : "dark");
+           document.documentElement.dataset.theme = theme;
+         })();`
       }
     </script>
   </head>
@@ -44,9 +45,7 @@ const { title, activeTab = 'dashboard' } = Astro.props;
     </script>
     <script>
       import { syncFromCloud } from '../lib/db-client';
-      // Pull latest data from Supabase on page load
       syncFromCloud().catch(() => {});
-      // Also sync when coming back online
       window.addEventListener('online', () => syncFromCloud().catch(() => {}));
     </script>
     <div class="flex min-h-[100dvh]">

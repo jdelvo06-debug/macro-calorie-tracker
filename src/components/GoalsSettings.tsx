@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getGoals, updateGoals, type GoalsRow } from "../lib/db-client";
+import { getGoals, updateGoals } from "../lib/db-client";
 
 export default function GoalsSettings() {
   const [loading, setLoading] = useState(true);
@@ -99,8 +99,11 @@ export default function GoalsSettings() {
           <span className="sr-only">Daily calorie target</span>
           <input
             type="number"
+            inputMode="numeric"
+            enterKeyHint="done"
             value={calories}
             onChange={(event) => setCalories(Number(event.target.value))}
+            onFocus={(e) => e.target.select()}
             min={500}
             max={10000}
             step={50}
@@ -170,12 +173,12 @@ export default function GoalsSettings() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-zinc-500 font-mono">{Math.round(macro.grams)}g</span>
-                <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle">
-                  <button type="button" onClick={() => macro.setPct(Math.max(0, macro.pct - 5))} className="px-2 py-1 text-zinc-400 hover:text-zinc-200">
+                  <div className="flex items-center rounded-lg bg-zinc-800/50 border border-border-subtle min-h-[44px]">
+                    <button type="button" onClick={() => macro.setPct(Math.max(0, macro.pct - 5))} className="px-4 py-3 text-zinc-400 hover:text-zinc-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
                     −
                   </button>
                   <span className="px-2 py-1 text-sm font-mono text-zinc-300 min-w-[3rem] text-center">{macro.pct}%</span>
-                  <button type="button" onClick={() => macro.setPct(Math.min(100, macro.pct + 5))} className="px-2 py-1 text-zinc-400 hover:text-zinc-200">
+                  <button type="button" onClick={() => macro.setPct(Math.min(100, macro.pct + 5))} className="px-4 py-3 text-zinc-400 hover:text-zinc-200 min-w-[44px] min-h-[44px] flex items-center justify-center">
                     +
                   </button>
                 </div>
@@ -229,9 +232,12 @@ export default function GoalsSettings() {
           <span className="sr-only">Goal weight in pounds</span>
           <input
             type="number"
+            inputMode="decimal"
+            enterKeyHint="done"
             step="0.1"
             value={goalWeight}
             onChange={(event) => setGoalWeight(event.target.value)}
+            onFocus={(e) => e.target.select()}
             placeholder="Optional"
             className="w-full px-4 py-3 pr-12 rounded-xl bg-zinc-800/50 border border-border-subtle text-zinc-200 font-mono focus:outline-none focus:border-zinc-600 placeholder:text-zinc-600"
           />

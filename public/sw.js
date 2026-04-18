@@ -1,14 +1,14 @@
-const CACHE_NAME = 'macro-v1';
+const BASE = '/macro-calorie-tracker';
+const CACHE_NAME = 'macro-v2';
 const PRECACHE_URLS = [
-  '/',
-  '/log',
-  '/weight',
-  '/goals',
-  '/diary',
-  '/settings',
+  `${BASE}/`,
+  `${BASE}/log`,
+  `${BASE}/weight`,
+  `${BASE}/goals`,
+  `${BASE}/diary`,
+  `${BASE}/settings`,
 ];
 
-// Install: precache shell pages
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
@@ -16,7 +16,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -26,18 +25,14 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for static, stale-while-revalidate for pages
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // API calls: network only (always fresh)
   if (url.pathname.startsWith('/api/')) return;
 
-  // Static assets: cache-first
   if (url.pathname.match(/\.(js|css|png|svg|ico|woff2?)$/)) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -54,7 +49,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Pages: stale-while-revalidate
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetchPromise = fetch(request).then((response) => {

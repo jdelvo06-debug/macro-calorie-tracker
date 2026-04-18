@@ -1,8 +1,11 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import DashboardView from '../components/Dashboard';
 ---
 
 <AppLayout title="Dashboard" activeTab="dashboard">
-  <DashboardView client:load />
+  <ErrorBoundary client:load>
+    <DashboardView client:load />
+  </ErrorBoundary>
 </AppLayout>

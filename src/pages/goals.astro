@@ -1,8 +1,11 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import GoalsSettingsView from '../components/GoalsSettings';
 ---
 
 <AppLayout title="Goals" activeTab="goals">
-  <GoalsSettingsView client:load />
+  <ErrorBoundary client:load>
+    <GoalsSettingsView client:load />
+  </ErrorBoundary>
 </AppLayout>
