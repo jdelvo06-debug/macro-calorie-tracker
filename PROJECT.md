@@ -54,7 +54,7 @@ Full DDL: `supabase-schema.sql`
 | `src/lib/food-search-client.ts` | USDA + OFF search, serving normalization, barcode lookup |
 | `src/lib/open-food-facts.ts` | Nutrient helpers, log payload builder |
 | `src/lib/supabase.ts` | Supabase client init |
-| `src/lib/types.ts` | TypeScript interfaces, MealType, meal labels |
+| `src/lib/types.ts` | MealType, MEAL_LABELS, MEAL_ORDER |
 | `src/components/FoodSearch.tsx` | Search + Recent tabs, serving toggle, barcode scan trigger |
 | `src/components/BarcodeScanner.tsx` | Quagga2 live scan + photo upload fallback |
 | `src/components/Dashboard.tsx` | Home: calorie ring, macro bars, today's meals |
@@ -67,6 +67,21 @@ Full DDL: `supabase-schema.sql`
 | `.github/workflows/deploy.yml` | Auto-deploy workflow |
 
 ## Current Status
+
+### ✅ Shipped (2026-04-18)
+- Code review fixes: dead code removal, type safety, security hardening
+- USDA API key moved to build-time env var (was hardcoded in client bundle)
+- CSP added restricting connect-src to known API domains
+- syncFromCloud non-destructive (cloud-wins merge instead of clear+replace)
+- Atomic sync transactions (prevent partial-state on page close)
+- Service worker PRECACHE_URLS fixed for /macro-calorie-tracker/ subdirectory
+- Barcode: unified check-digit verification on both camera + photo paths
+- Barcode: tightened isValidBarcode to numeric-only of known lengths
+- Mobile UX: removed user-scalable=no, added inputMode/enterKeyHint, 44px touch targets
+- React ErrorBoundary wrapper on all island components
+- All 13 TypeScript errors fixed (now 0 errors)
+- toFoodLogPayload accepts nutrition override (eliminates double-computation)
+- PWA manifest corrected with scope/start_url for subdirectory
 
 ### ✅ Shipped (2026-04-15)
 - Static migration (LibSQL → IndexedDB)
@@ -84,15 +99,19 @@ Full DDL: `supabase-schema.sql`
 ### 🔲 Backlog
 - [ ] PWA install test on iPhone
 - [ ] Auth (Supabase auth when multi-device is real)
-- [ ] Conflict resolution for Supabase sync
+- [ ] Conflict resolution for Supabase sync (cloud-wins can lose offline-only entries)
 - [ ] Dark/light theme consistency in React components
 - [ ] Serving size editing after logging
 - [ ] Nutrition detail view (tap food in Diary for full breakdown)
 - [ ] Barcode: test photo upload fallback on iOS
 - [ ] Accessibility audit (ARIA, focus management)
+- [ ] Pending-writes retry queue for Supabase (fire-and-forget can silently fail)
+- [ ] UUID record IDs for multi-device (current auto-increment IDs can collide)
+- [ ] Build-time cache name for service worker (currently manual bump)
 
 ## History
 
+- **2026-04-18**: Code review fix sprint — security, dead code, sync safety, mobile UX, TS errors, error boundaries
 - **2026-04-15**: Feature sprint — barcode scanner, serving toggle, recent foods, export/import, scanner polish
 - **2026-04-15**: Static migration, PWA, Supabase sync, serving size fix, GitHub Pages routing
 - **2026-04-14**: Original build (LibSQL + Node adapter + basic auth) — see `_archive/`

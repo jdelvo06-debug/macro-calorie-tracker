@@ -10,7 +10,7 @@ A mobile-first calorie and macro tracking PWA. Search USDA and Open Food Facts d
 
 ### Food Logging
 - **Dual-database search** — USDA FoodData Central + Open Food Facts (merged, deduped)
-- **Barcode scanner** — Live camera scanning with Quagga2 (UPC-A, EAN-13, EAN-8, Code-128) + photo upload fallback
+- **Barcode scanner** — Live camera scanning with Quagga2 (UPC-A, EAN-13, EAN-8) + photo upload fallback, with check-digit verification
 - **Serving unit toggle** — Switch between ×servings, grams, or oz when logging
 - **Smart serving sizes** — ~50 common foods auto-mapped to real portions (bacon=3 slices, chicken breast=1 breast, etc.)
 - **Recent foods** — One-tap re-log from your history (deduped, most recent first)
@@ -21,7 +21,7 @@ A mobile-first calorie and macro tracking PWA. Search USDA and Open Food Facts d
 - **Diary** — Daily food log grouped by meal, inline edit/delete
 - **Weight tracker** — Chart with goal-weight overlay
 - **Goals** — Calorie target, macro split (protein/carbs/fat %), goal weight
-- **Nutrition detail** — Full macro/micro breakdown per food item
+- **Nutrition detail** — Full macro/micro breakdown per food item (available via Diary)
 
 ### Data
 - **Offline-first** — IndexedDB stores everything locally, works without internet
@@ -93,27 +93,26 @@ A mobile-first calorie and macro tracking PWA. Search USDA and Open Food Facts d
 ├── src/
 │   ├── components/           # React UI components
 │   │   ├── BarcodeScanner.tsx    # Quagga2 camera scanner + photo fallback
-│   │   ├── CircularProgress.tsx  # SVG progress ring
 │   │   ├── Dashboard.tsx        # Home screen: calories, macros, meals
 │   │   ├── DataManager.tsx      # Export/import in Settings
 │   │   ├── Diary.tsx            # Daily food log, inline edit/delete
+│   │   ├── ErrorBoundary.tsx    # React error boundary wrapper
 │   │   ├── FoodSearch.tsx       # Search, Recent tabs, serving toggle, scan
 │   │   ├── GoalsSettings.tsx    # Calorie + macro goal configuration
 │   │   ├── MacroBar.tsx         # Protein/carbs/fat progress bars
-│   │   ├── MobileNav.tsx        # Bottom tab bar
-│   │   ├── NutritionDetail.tsx  # Full nutrient breakdown overlay
+│   │   ├── MobileNav.tsx         # Bottom tab bar
 │   │   ├── ProgressRing.tsx     # Calorie ring component
-│   │   ├── ThemeToggle.tsx      # Dark/light/system toggle
+│   │   ├── ThemeToggle.tsx      # Dark/light toggle
 │   │   ├── WeightTracker.tsx    # Weight chart + log
 │   │   └── DesktopSidebar.astro # Desktop nav sidebar
 │   ├── layouts/
 │   │   └── AppLayout.astro       # Shared layout, triggers cloud sync
 │   ├── lib/                   # Core logic
-│   │   ├── db-client.ts          # IndexedDB CRUD + Supabase dual-write
+│   │   ├── db-client.ts          # IndexedDB CRUD + Supabase dual-write + types
 │   │   ├── food-search-client.ts # USDA + OFF search, serving normalization
 │   │   ├── open-food-facts.ts    # Nutrient helpers, log payload builder
 │   │   ├── supabase.ts           # Supabase client init
-│   │   ├── types.ts              # TypeScript interfaces, MealType
+│   │   ├── types.ts              # MealType, MEAL_LABELS, MEAL_ORDER
 │   │   ├── date.ts               # Date formatting helpers
 │   │   └── validation.ts         # Zod schemas, type guards
 │   ├── pages/                 # Astro pages (route → component)
@@ -159,6 +158,7 @@ npm install
 |----------|----------|-------------|
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Yes | Supabase anon key (safe for frontend, RLS enforced) |
+| `USDA_FDC_API_KEY` | Yes | USDA FoodData Central API key (injected at build time) |
 
 ```bash
 export SUPABASE_URL=https://your-project.supabase.co
@@ -193,6 +193,7 @@ Push to `main` → GitHub Actions builds and deploys to GitHub Pages automatical
 |--------|-------------|
 | `SUPABASE_URL` | Passed at build time for env substitution |
 | `SUPABASE_ANON_KEY` | Passed at build time for env substitution |
+| `USDA_FDC_API_KEY` | Passed at build time for env substitution |
 
 ### GitHub Pages Setup
 1. Go to repo Settings → Pages
@@ -223,7 +224,7 @@ RLS policies: `USING (true)` / `WITH CHECK (true)` — open access (no auth yet,
 |----------|--------|-------------|
 | `searchFoods(query)` | `food-search-client.ts` | Combined USDA + OFF search, deduped |
 | `lookupBarcode(barcode)` | `food-search-client.ts` | OFF barcode lookup by code |
-| `toFoodLogPayload(product, ctx)` | `open-food-facts.ts` | Convert SearchResult → FoodLogEntry |
+| `toFoodLogPayload(product, ctx, override?)` | `open-food-facts.ts` | Convert SearchResult → FoodLogEntry, optional nutrition override |
 | `getServingSize(product)` | `open-food-facts.ts` | Get human-readable serving size |
 
 ### Data Layer
@@ -257,8 +258,9 @@ RLS policies: `USING (true)` / `WITH CHECK (true)` — open access (no auth yet,
 ## Known Issues
 
 - Live barcode scanning may be slow on older iOS devices — photo upload fallback is reliable
-- Supabase sync is eventually consistent (no conflict resolution) — fine for single-user
+- Supabase sync is cloud-wins on conflict (no merge) — fine for single-user, but offline-only entries can be overwritten by cloud data
 - USDA search returns per-100g; common serving table covers ~50 foods, others default to 100g
+- Service worker cache requires manual `CACHE_NAME` bump on each deploy
 
 ---
 
